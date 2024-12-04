@@ -1,7 +1,8 @@
-package client;
+// client/app/ClientMain.java
+package client.app;
 
-import client.components.LoginDialog;
-
+import client.ui.dialog.LoginDialog;
+import client.ui.MainMenu;
 import javax.swing.*;
 
 public class ClientMain {
@@ -18,21 +19,22 @@ public class ClientMain {
             frame.setSize(800, 600);
             frame.setLocationRelativeTo(null);
 
+            // 로그인 다이얼로그 표시
             LoginDialog loginDialog = new LoginDialog(frame);
             loginDialog.setVisible(true);
 
             if (loginDialog.isAccepted()) {
                 try {
+                    // GameClient 생성 및 초기화
                     GameClient client = new GameClient(
                             loginDialog.getServerAddress(),
                             loginDialog.getPort(),
                             loginDialog.getNickname()
                     );
 
-                    // 먼저 MainMenu 생성
+                    // MainMenu 생성 및 설정
                     MainMenu mainMenu = new MainMenu(client);
-                    // 그 다음 GameClient에 MainMenu 설정
-                    client.setMainMenu(mainMenu);
+                    client.setEventListener(mainMenu);
 
                     frame.add(mainMenu);
                     frame.setVisible(true);
