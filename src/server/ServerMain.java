@@ -1,4 +1,3 @@
-// server/ServerMain.java
 package server;
 
 public class ServerMain {

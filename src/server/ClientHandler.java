@@ -1,4 +1,3 @@
-// server/ClientHandler.java
 package server;
 
 import java.io.*;
@@ -34,7 +33,11 @@ public class ClientHandler implements Runnable {
         } catch (IOException e) {
             System.out.println("클라이언트 연결 종료: " + e.getMessage());
         } finally {
-            cleanup();
+            try {
+                cleanup(); // 반드시 호출
+            } catch (Exception e) {
+                System.err.println("cleanup 중 에러: " + e.getMessage());
+            }
         }
     }
 
@@ -68,6 +71,9 @@ public class ClientHandler implements Runnable {
                 case "ROOM_LIST":
                     server.broadcastRoomList();
                     break;
+                case "REQUEST_USER_COUNT":
+                    handleRequestUserCount();
+                    break;
             }
         } catch (Exception e) {
             System.err.println("메시지 처리 중 에러: " + e.getMessage());
@@ -81,6 +87,11 @@ public class ClientHandler implements Runnable {
             System.out.println("새로운 사용자 로그인: " + username);
             server.broadcastUserCount();
         }
+    }
+
+    private void handleRequestUserCount() {
+        int userCount = server.getCurrentClientCount();
+        sendMessage("USERS|" + userCount);
     }
 
     private void handleJoinRoom(String[] parts) {
@@ -126,20 +137,30 @@ public class ClientHandler implements Runnable {
     public void shutdown() {
         running = false;
         try {
-            if (out != null) out.close();
-            if (in != null) in.close();
             if (socket != null && !socket.isClosed()) socket.close();
         } catch (IOException e) {
-            System.err.println("클라이언트 핸들러 종료 중 에러: " + e.getMessage());
+            System.err.println("소켓 종료 중 에러: " + e.getMessage());
+        } finally {
+            try {
+                if (out != null) out.close();
+                if (in != null) in.close();
+            } catch (IOException e) {
+                System.err.println("스트림 종료 중 에러: " + e.getMessage());
+            }
         }
     }
 
     private void cleanup() {
-        if (currentRoomId != null) {
-            server.leaveRoom(currentRoomId, this);
+        try {
+            if (currentRoomId != null) {
+                server.leaveRoom(currentRoomId, this);
+            }
+            server.removeClient(this);
+        } catch (Exception e) {
+            System.err.println("cleanup 중 에러: " + e.getMessage());
+        } finally {
+            shutdown();
         }
-        server.removeClient(this);
-        shutdown();
     }
 
     public String getUsername() {
