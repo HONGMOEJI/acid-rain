@@ -2,20 +2,27 @@
 package game.model;
 
 public enum DifficultyLevel {
-    EASY("쉬움", 1.0f),
-    NORMAL("보통", 1.5f),
-    HARD("어려움", 2.0f);
+    EASY("Easy"),
+    MEDIUM("Medium"),
+    HARD("Hard");
 
     private final String displayName;
-    private final float speedMultiplier;
 
-    DifficultyLevel(String displayName, float speedMultiplier) {
+    DifficultyLevel(String displayName) {
         this.displayName = displayName;
-        this.speedMultiplier = speedMultiplier;
     }
 
-    public float getSpeedMultiplier() {
-        return speedMultiplier;
+    public String getDisplayName() {
+        return displayName;
+    }
+
+    public static DifficultyLevel fromDisplayName(String displayName) {
+        for (DifficultyLevel level : DifficultyLevel.values()) {
+            if (level.displayName.equalsIgnoreCase(displayName)) {
+                return level;
+            }
+        }
+        throw new IllegalArgumentException("Invalid DifficultyLevel: " + displayName);
     }
 
     @Override

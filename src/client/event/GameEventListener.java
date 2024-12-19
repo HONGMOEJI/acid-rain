@@ -1,4 +1,4 @@
-// client/event/GameEventListener.java
+// GameEventListener.java
 package client.event;
 
 public interface GameEventListener {

@@ -13,6 +13,19 @@ public enum GameMode {
         this.displayName = displayName;
     }
 
+    public String getDisplayName() {
+        return displayName;
+    }
+
+    public static GameMode fromDisplayName(String displayName) {
+        for (GameMode mode : GameMode.values()) {
+            if (mode.displayName.equalsIgnoreCase(displayName)) {
+                return mode;
+            }
+        }
+        throw new IllegalArgumentException("Invalid GameMode: " + displayName);
+    }
+
     @Override
     public String toString() {
         return displayName;

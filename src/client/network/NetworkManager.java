@@ -1,4 +1,3 @@
-// client/network/NetworkManager.java
 package client.network;
 
 import java.io.*;
@@ -11,15 +10,14 @@ public class NetworkManager {
     private final MessageHandler messageHandler;
     private boolean connected = false;
 
-    public NetworkManager(String host, int port, MessageHandler messageHandler) {
+    public NetworkManager(MessageHandler messageHandler) {
         this.messageHandler = messageHandler;
-        connect(host, port);
     }
 
-    public void connect(String host, int port) {
-        if (connected && socket != null && !socket.isClosed()) {
-            System.out.println("이미 연결된 상태입니다. 새 연결을 생성하지 않습니다.");
-            return;
+    public synchronized void connect(String host, int port) {
+        if (connected) {
+            System.out.println("이미 연결된 상태입니다: " + host + ":" + port);
+            return; // 이미 연결되어 있으면 재연결 방지
         }
 
         try {
@@ -49,20 +47,29 @@ public class NetworkManager {
         }).start();
     }
 
-    public void sendMessage(String message) {
-        if (connected && out != null) {
-            out.println(message);
+    public synchronized void sendMessage(String message) {
+        if (!connected || out == null) {
+            System.err.println("메시지를 보낼 수 없습니다. 서버와 연결되지 않았습니다.");
+            return;
         }
+        out.println(message);
     }
 
-    public void disconnect() {
+    public synchronized void disconnect() {
+        if (!connected) return; // 이미 연결이 끊어진 상태라면 무시
+
         connected = false;
         try {
-            if (out != null) out.close();
-            if (in != null) in.close();
-            if (socket != null) socket.close();
+            if (socket != null && !socket.isClosed()) socket.close();
         } catch (IOException e) {
-            System.err.println("연결 종료 중 오류 발생: " + e.getMessage());
+            System.err.println("소켓 종료 중 에러: " + e.getMessage());
+        } finally {
+            try {
+                if (out != null) out.close();
+                if (in != null) in.close();
+            } catch (IOException e) {
+                System.err.println("스트림 종료 중 에러: " + e.getMessage());
+            }
         }
     }
 }

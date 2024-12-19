@@ -1,4 +1,3 @@
-// client/ui/MainMenu.java
 package client.ui;
 
 import client.app.GameClient;
@@ -50,18 +49,15 @@ public class MainMenu extends JPanel implements GameEventListener {
         topMenuBar = new JPanel(new BorderLayout());
         topMenuBar.setBackground(ColorScheme.SECONDARY);
 
-        // 왼쪽 메뉴
         JPanel leftMenu = createMenuSection(FlowLayout.LEFT,
                 createMenuLabel("배경색 설정", this::showBackgroundColorDialog),
                 createMenuLabel("마이페이지", this::showMyPage)
         );
 
-        // 중앙 메뉴
         JPanel centerMenu = createMenuSection(FlowLayout.CENTER,
                 createMenuLabel(client.getUsername() + "님이 입장하셨습니다.", null)
         );
 
-        // 오른쪽 메뉴
         JPanel rightMenu = createMenuSection(FlowLayout.RIGHT,
                 createMenuLabel("랭킹", this::showRanking),
                 createMenuLabel("종료", () -> System.exit(0))
@@ -144,11 +140,10 @@ public class MainMenu extends JPanel implements GameEventListener {
     }
 
     private void startGame() {
-        SwingUtilities.invokeLater(() -> {
-            JFrame currentFrame = (JFrame) SwingUtilities.getWindowAncestor(this);
-            RoomListDialog dialog = new RoomListDialog(currentFrame, client);
-            dialog.setVisible(true);
-        });
+        setVisible(false);  // 메인 메뉴 숨기기
+        JFrame currentFrame = (JFrame) SwingUtilities.getWindowAncestor(this);
+        RoomListDialog dialog = new RoomListDialog(currentFrame, client);
+        dialog.setVisible(true);
     }
 
     private void showBackgroundColorDialog() {
@@ -172,8 +167,9 @@ public class MainMenu extends JPanel implements GameEventListener {
     @Override
     public void onGameEvent(String eventType, Object... data) {
         if (eventType.equals(GameEvent.USERS_UPDATED) && data.length > 0) {
+            int newConnectedUsers = (int) data[0];
             SwingUtilities.invokeLater(() -> {
-                connectedUsers = (int) data[0];
+                connectedUsers = newConnectedUsers;
                 connectedUsersLabel.setText("현재 접속자 수: " + connectedUsers);
             });
         }

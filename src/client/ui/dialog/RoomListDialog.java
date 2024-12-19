@@ -1,30 +1,40 @@
-// client/ui/dialog/RoomListDialog.java
 package client.ui.dialog;
 
 import client.app.GameClient;
 import client.event.GameEvent;
 import client.event.GameEventListener;
 import client.ui.components.RetroButton;
+import client.ui.game.GameLobby;
 import client.ui.theme.ColorScheme;
 import client.ui.theme.FontManager;
 import game.model.GameRoom;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
+import javax.swing.plaf.basic.BasicScrollBarUI;
 import java.awt.*;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
-
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 
 public class RoomListDialog extends BaseDialog implements GameEventListener {
     private final DefaultListModel<RoomListItem> roomListModel;
     private final JList<RoomListItem> roomList;
     private final GameClient client;
+    private final JFrame mainFrame;
     private List<GameRoom> rooms = new ArrayList<>();
+    private Timer refreshTimer;
+    private JLabel statusLabel;
+    private boolean isClosing = false;
 
-    public RoomListDialog(JFrame parent, GameClient client) {
-        super(parent, "게임 방 목록");
+    public RoomListDialog(JFrame mainFrame, GameClient client) {
+        super(mainFrame, "게임 방 목록");
+        this.mainFrame = mainFrame;
         this.client = client;
+
+        mainFrame.setVisible(false);
         this.client.setEventListener(this);
 
         roomListModel = new DefaultListModel<>();
@@ -32,29 +42,35 @@ public class RoomListDialog extends BaseDialog implements GameEventListener {
 
         setupDialog();
         setupUI();
+        setupRefreshTimer();
+        setupWindowListener();
+
         client.sendMessage("ROOM_LIST");
     }
 
     private void setupDialog() {
-        setSize(800, 600);
+        setSize(1000, 700);
         setLocationRelativeTo(getOwner());
+        setResizable(true);
         mainPanel.setBorder(new EmptyBorder(20, 20, 20, 20));
+        setDefaultCloseOperation(JDialog.DO_NOTHING_ON_CLOSE);
     }
 
     private void setupUI() {
         mainPanel.setLayout(new BorderLayout(0, 20));
 
-        // 헤더 패널
-        JPanel headerPanel = createHeaderPanel();
-        mainPanel.add(headerPanel, BorderLayout.NORTH);
+        JPanel topPanel = new JPanel(new BorderLayout(10, 10));
+        topPanel.setBackground(ColorScheme.BACKGROUND);
+        topPanel.add(createHeaderPanel(), BorderLayout.CENTER);
 
-        // 리스트 패널
-        JPanel listPanel = createListPanel();
-        mainPanel.add(listPanel, BorderLayout.CENTER);
+        statusLabel = new JLabel("방 목록을 불러오는 중...");
+        statusLabel.setFont(FontManager.getFont(14f));
+        statusLabel.setForeground(ColorScheme.TEXT);
+        topPanel.add(statusLabel, BorderLayout.SOUTH);
 
-        // 버튼 패널
-        JPanel buttonPanel = createButtonPanel();
-        mainPanel.add(buttonPanel, BorderLayout.SOUTH);
+        mainPanel.add(topPanel, BorderLayout.NORTH);
+        mainPanel.add(createListPanel(), BorderLayout.CENTER);
+        mainPanel.add(createButtonPanel(), BorderLayout.SOUTH);
     }
 
     private JPanel createHeaderPanel() {
@@ -62,7 +78,7 @@ public class RoomListDialog extends BaseDialog implements GameEventListener {
         panel.setBackground(ColorScheme.BACKGROUND);
 
         JLabel titleLabel = new JLabel("게임 방 목록");
-        titleLabel.setFont(FontManager.getFont(24f));
+        titleLabel.setFont(FontManager.getFont(28f));
         titleLabel.setForeground(ColorScheme.TEXT);
         titleLabel.setBorder(new EmptyBorder(0, 0, 10, 0));
         titleLabel.setHorizontalAlignment(SwingConstants.CENTER);
@@ -75,16 +91,14 @@ public class RoomListDialog extends BaseDialog implements GameEventListener {
         JPanel panel = new JPanel(new BorderLayout());
         panel.setBackground(ColorScheme.BACKGROUND);
 
-        // 리스트 설정
         roomList.setBackground(ColorScheme.SECONDARY);
         roomList.setForeground(ColorScheme.TEXT);
         roomList.setSelectionBackground(ColorScheme.PRIMARY);
         roomList.setSelectionForeground(ColorScheme.TEXT);
         roomList.setFont(FontManager.getFont(16f));
         roomList.setCellRenderer(new RoomListCellRenderer());
-        roomList.setFixedCellHeight(50);
+        roomList.setFixedCellHeight(60);
 
-        // 더블 클릭 이벤트
         roomList.addMouseListener(new java.awt.event.MouseAdapter() {
             public void mouseClicked(java.awt.event.MouseEvent evt) {
                 if (evt.getClickCount() == 2) {
@@ -94,44 +108,91 @@ public class RoomListDialog extends BaseDialog implements GameEventListener {
         });
 
         JScrollPane scrollPane = new JScrollPane(roomList);
-        scrollPane.setBorder(BorderFactory.createLineBorder(ColorScheme.PRIMARY));
+        scrollPane.setBorder(BorderFactory.createLineBorder(ColorScheme.PRIMARY, 2));
         scrollPane.setBackground(ColorScheme.BACKGROUND);
         scrollPane.getViewport().setBackground(ColorScheme.SECONDARY);
+
+        JScrollBar verticalScrollBar = scrollPane.getVerticalScrollBar();
+        verticalScrollBar.setUI(new BasicScrollBarUI() {
+            @Override
+            protected void configureScrollBarColors() {
+                this.thumbColor = ColorScheme.PRIMARY;
+                this.trackColor = ColorScheme.SECONDARY;
+            }
+        });
 
         panel.add(scrollPane, BorderLayout.CENTER);
         return panel;
     }
 
     private JPanel createButtonPanel() {
-        JPanel panel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
+        JPanel panel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 15, 0));
         panel.setBackground(ColorScheme.BACKGROUND);
 
-        RetroButton refreshButton = new RetroButton("새로고침");
-        RetroButton createButton = new RetroButton("방 만들기");
-        RetroButton joinButton = new RetroButton("입장");
+        RetroButton refreshButton = new RetroButton("새로고침 (F5)");
+        RetroButton createButton = new RetroButton("방 만들기 (F2)");
+        RetroButton joinButton = new RetroButton("입장 (Enter)");
+        RetroButton backButton = new RetroButton("돌아가기 (ESC)");
 
-        refreshButton.addActionListener(e -> client.sendMessage("ROOM_LIST"));
+        refreshButton.addActionListener(e -> refreshRoomList());
         createButton.addActionListener(e -> showCreateRoomDialog());
         joinButton.addActionListener(e -> joinSelectedRoom());
+        backButton.addActionListener(e -> handleClose());
+
+        setupKeyboardShortcuts(refreshButton, createButton, joinButton, backButton);
 
         panel.add(refreshButton);
         panel.add(createButton);
         panel.add(joinButton);
+        panel.add(backButton);
 
         return panel;
     }
 
-    private GridBagConstraints createConstraints(int y, int gridheight) {
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.gridx = 0;
-        gbc.gridy = y;
-        gbc.gridwidth = GridBagConstraints.REMAINDER;
-        gbc.gridheight = gridheight;
-        gbc.fill = GridBagConstraints.BOTH;
-        gbc.weightx = 1.0;
-        gbc.weighty = y == 1 ? 1.0 : 0.0; // 리스트에만 수직 가중치 부여
-        gbc.insets = new Insets(5, 5, 5, 5);
-        return gbc;
+    private void setupKeyboardShortcuts(JButton refreshButton, JButton createButton,
+                                        JButton joinButton, JButton backButton) {
+        getRootPane().registerKeyboardAction(
+                e -> refreshButton.doClick(),
+                KeyStroke.getKeyStroke("F5"),
+                JComponent.WHEN_IN_FOCUSED_WINDOW
+        );
+
+        getRootPane().registerKeyboardAction(
+                e -> createButton.doClick(),
+                KeyStroke.getKeyStroke("F2"),
+                JComponent.WHEN_IN_FOCUSED_WINDOW
+        );
+
+        getRootPane().registerKeyboardAction(
+                e -> joinButton.doClick(),
+                KeyStroke.getKeyStroke("ENTER"),
+                JComponent.WHEN_IN_FOCUSED_WINDOW
+        );
+
+        getRootPane().registerKeyboardAction(
+                e -> backButton.doClick(),
+                KeyStroke.getKeyStroke("ESCAPE"),
+                JComponent.WHEN_IN_FOCUSED_WINDOW
+        );
+    }
+
+    private void setupRefreshTimer() {
+        refreshTimer = new Timer(30000, e -> refreshRoomList());
+        refreshTimer.start();
+    }
+
+    private void setupWindowListener() {
+        addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowClosing(WindowEvent e) {
+                handleClose();
+            }
+        });
+    }
+
+    public void refreshRoomList() {
+        statusLabel.setText("방 목록을 새로고치는 중...");
+        client.sendMessage("ROOM_LIST");
     }
 
     private void showCreateRoomDialog() {
@@ -146,18 +207,28 @@ public class RoomListDialog extends BaseDialog implements GameEventListener {
     private void joinSelectedRoom() {
         RoomListItem selectedItem = roomList.getSelectedValue();
         if (selectedItem == null) {
-            showError("입장할 방을 선택해주세요.");
+            JOptionPane.showMessageDialog(this,
+                    "입장할 방을 선택해주세요.",
+                    "알림",
+                    JOptionPane.INFORMATION_MESSAGE);
             return;
         }
 
         GameRoom selectedRoom = findRoomById(selectedItem.getRoomId());
         if (selectedRoom == null) {
-            showError("선택한 방을 찾을 수 없습니다.");
+            JOptionPane.showMessageDialog(this,
+                    "선택한 방을 찾을 수 없습니다. 방 목록을 새로고침해주세요.",
+                    "오류",
+                    JOptionPane.ERROR_MESSAGE);
+            refreshRoomList();
             return;
         }
 
         if (selectedRoom.isFull()) {
-            showError("방이 가득 찼습니다.");
+            JOptionPane.showMessageDialog(this,
+                    "방이 가득 찼습니다.",
+                    "입장 불가",
+                    JOptionPane.WARNING_MESSAGE);
             return;
         }
 
@@ -169,19 +240,54 @@ public class RoomListDialog extends BaseDialog implements GameEventListener {
     }
 
     private void showPasswordDialog(GameRoom room) {
+        JPanel panel = new JPanel(new BorderLayout(10, 10));
+        panel.setPreferredSize(new Dimension(250, 80));
+
+        JLabel label = new JLabel("비밀번호를 입력하세요:");
+        label.setFont(FontManager.getFont(14f));
+        panel.add(label, BorderLayout.NORTH);
+
         JPasswordField passwordField = new JPasswordField();
+        passwordField.setFont(FontManager.getFont(14f));
+        panel.add(passwordField, BorderLayout.CENTER);
+
         int option = JOptionPane.showConfirmDialog(this,
-                passwordField,
-                "비밀번호를 입력하세요",
-                JOptionPane.OK_CANCEL_OPTION);
+                panel,
+                "비밀번호 입력",
+                JOptionPane.OK_CANCEL_OPTION,
+                JOptionPane.PLAIN_MESSAGE);
 
         if (option == JOptionPane.OK_OPTION) {
             String password = new String(passwordField.getPassword());
             if (!password.isEmpty()) {
                 client.sendJoinRoomRequest(room.getRoomId(), password);
             } else {
-                showError("비밀번호를 입력해주세요.");
+                JOptionPane.showMessageDialog(this,
+                        "비밀번호를 입력해주세요.",
+                        "알림",
+                        JOptionPane.WARNING_MESSAGE);
             }
+        }
+    }
+
+    private void handleClose() {
+        if (!isClosing) {
+            isClosing = true;
+            if (refreshTimer != null) {
+                refreshTimer.stop();
+            }
+            client.setEventListener(null);
+            mainFrame.setVisible(true);
+            dispose();
+        }
+    }
+
+    @Override
+    public void dispose() {
+        if (!isClosing) {
+            handleClose();
+        } else {
+            super.dispose();
         }
     }
 
@@ -202,22 +308,54 @@ public class RoomListDialog extends BaseDialog implements GameEventListener {
                 case GameEvent.ROOM_JOINED:
                     handleRoomJoined(data);
                     break;
+                case GameEvent.ROOM_CREATED:
+                    handleRoomCreated(data);
+                    break;
                 case GameEvent.ERROR_OCCURRED:
-                    showError((String) data[0]);
+                    handleError((String) data[0]);
                     break;
             }
         });
     }
 
     private void handleRoomListUpdate(Object... data) {
-        // 방 목록 업데이트 처리
         roomListModel.clear();
-        if (data.length > 0 && data[0] instanceof List) {
-            this.rooms = (List<GameRoom>) data[0];
-            for (GameRoom room : rooms) {
-                roomListModel.addElement(new RoomListItem(room));
+        rooms.clear();
+
+        if (data.length > 0) {
+            String[] roomInfos;
+            if (data[0] instanceof String[]) {
+                roomInfos = (String[]) data[0];
+            } else if (data[0] instanceof String) {
+                roomInfos = new String[]{(String) data[0]};
+            } else {
+                return;
+            }
+
+            for (String roomInfo : roomInfos) {
+                try {
+                    GameRoom room = GameRoom.fromString(roomInfo);
+                    if (room != null) {
+                        rooms.add(room);
+                        roomListModel.addElement(new RoomListItem(room));
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
             }
         }
+
+        updateStatusLabel();
+        roomList.revalidate();
+        roomList.repaint();
+    }
+
+    private void updateStatusLabel() {
+        String status = String.format("총 %d개의 방이 있습니다.", rooms.size());
+        if (rooms.isEmpty()) {
+            status = "현재 생성된 방이 없습니다. 새로운 방을 만들어보세요!";
+        }
+        statusLabel.setText(status);
     }
 
     private void handleRoomJoined(Object... data) {
@@ -225,11 +363,47 @@ public class RoomListDialog extends BaseDialog implements GameEventListener {
         String message = (String) data[1];
 
         if (success && data.length >= 3) {
-            GameRoom room = (GameRoom) data[2];
-            dispose(); // 방 입장 성공시 다이얼로그 닫기
+            try {
+                String roomInfoStr = (String) data[2];
+                GameRoom joinedRoom = GameRoom.fromString(roomInfoStr);
+
+                if (joinedRoom != null) {
+                    setVisible(false);  // 방 목록 숨기기
+                    new GameLobby(joinedRoom, client, mainFrame);
+                } else {
+                    throw new Exception("방 정보 변환 실패");
+                }
+            } catch (Exception e) {
+                JOptionPane.showMessageDialog(this,
+                        "방 입장 처리 중 오류가 발생했습니다: " + e.getMessage(),
+                        "입장 실패",
+                        JOptionPane.ERROR_MESSAGE);
+            }
         } else {
-            showError(message);
+            JOptionPane.showMessageDialog(this,
+                    message,
+                    "입장 실패",
+                    JOptionPane.ERROR_MESSAGE);
         }
+    }
+
+    private void handleRoomCreated(Object... data) {
+        boolean success = (boolean) data[0];
+        String message = (String) data[1];
+
+        if (!success) {
+            JOptionPane.showMessageDialog(this,
+                    message,
+                    "방 생성 실패",
+                    JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    private void handleError(String errorMessage) {
+        JOptionPane.showMessageDialog(this,
+                errorMessage,
+                "오류",
+                JOptionPane.ERROR_MESSAGE);
     }
 
     private static class RoomListItem {
@@ -238,13 +412,14 @@ public class RoomListDialog extends BaseDialog implements GameEventListener {
 
         public RoomListItem(GameRoom room) {
             this.roomId = room.getRoomId();
-            this.displayText = String.format("%s %s (%d/%d) - %s - %s",
+            this.displayText = String.format("[%s] %s %s (%d/%d) - %s - %s",
+                    room.getHostName(),
                     room.getRoomName(),
                     room.isPasswordRequired() ? "🔒" : "",
                     room.getCurrentPlayers(),
                     room.getMaxPlayers(),
-                    room.getGameMode(),
-                    room.getDifficulty());
+                    room.getGameMode().getDisplayName(),
+                    room.getDifficulty().getDisplayName());
         }
 
         public String getRoomId() {
@@ -267,9 +442,15 @@ public class RoomListDialog extends BaseDialog implements GameEventListener {
             label.setFont(FontManager.getFont(16f));
             label.setBorder(new EmptyBorder(10, 15, 10, 15));
 
+            RoomListItem item = (RoomListItem) value;
+            GameRoom room = findRoomById(item.getRoomId());
+            if (room != null && room.isFull() && !isSelected) {
+                label.setForeground(ColorScheme.TEXT.darker());
+            }
+
             if (!isSelected) {
-                label.setBackground(ColorScheme.SECONDARY);
-                label.setForeground(ColorScheme.TEXT);
+                label.setBackground(index % 2 == 0 ? ColorScheme.SECONDARY :
+                        ColorScheme.SECONDARY.brighter());
             }
 
             return label;

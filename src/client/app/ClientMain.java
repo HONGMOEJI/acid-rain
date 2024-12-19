@@ -1,44 +1,47 @@
-// client/app/ClientMain.java
+// Main entry point
 package client.app;
 
 import client.ui.dialog.LoginDialog;
 import client.ui.MainMenu;
 import javax.swing.*;
+import java.util.logging.Logger;
 
-public class ClientMain {
+    public class ClientMain {
+    private static final Logger logger = Logger.getLogger(ClientMain.class.getName());
+
     public static void main(String[] args) {
         try {
             UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.warning("시스템 룩앤필 설정 실패: " + e.getMessage());
         }
 
         SwingUtilities.invokeLater(() -> {
-            JFrame frame = new JFrame("산성비 게임");
+            JFrame frame = new JFrame("ACID RAIN");
             frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
             frame.setSize(800, 600);
             frame.setLocationRelativeTo(null);
 
-            // 로그인 다이얼로그 표시
             LoginDialog loginDialog = new LoginDialog(frame);
             loginDialog.setVisible(true);
 
             if (loginDialog.isAccepted()) {
                 try {
-                    // GameClient 생성 및 초기화
                     GameClient client = new GameClient(
                             loginDialog.getServerAddress(),
                             loginDialog.getPort(),
                             loginDialog.getNickname()
                     );
 
-                    // MainMenu 생성 및 설정
                     MainMenu mainMenu = new MainMenu(client);
                     client.setEventListener(mainMenu);
+
+                    client.connect();
 
                     frame.add(mainMenu);
                     frame.setVisible(true);
                 } catch (Exception e) {
+                    logger.severe("게임 클라이언트 초기화 실패: " + e.getMessage());
                     JOptionPane.showMessageDialog(frame,
                             "서버 연결 실패: " + e.getMessage(),
                             "오류",
