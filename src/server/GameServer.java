@@ -3,6 +3,7 @@ package server;
 import game.model.DifficultyLevel;
 import game.model.GameMode;
 import game.model.GameRoom;
+import client.event.GameEvent.*;
 
 import java.io.IOException;
 import java.net.ServerSocket;
@@ -80,7 +81,7 @@ public class GameServer {
         GameRoom room = rooms.get(roomId);
         if (room != null) {
             String playerList = String.join(";", room.getPlayers());
-            broadcastToRoom(roomId, "PLAYER_UPDATE|" + roomId + "|" +
+            broadcastToRoom(roomId,  ServerMessage.PLAYER_UPDATE + "|" + roomId + "|" +
                     room.getCurrentPlayers() + "|" + playerList);
             logger.info("플레이어 목록 전송: " + roomId + " - " + playerList);
         }
@@ -88,7 +89,7 @@ public class GameServer {
 
     public synchronized void createRoom(String[] roomInfo, ClientHandler creator) {
         if (roomInfo.length < 6) {
-            creator.sendMessage("CREATE_ROOM_RESPONSE|false|잘못된 요청 형식입니다.");
+            creator.sendMessage(ServerMessage.CREATE_ROOM_RESPONSE + "|false|잘못된 요청 형식입니다.");
             return;
         }
 
@@ -99,7 +100,7 @@ public class GameServer {
         int maxPlayers = Integer.parseInt(roomInfo[5]);
 
         if (roomName.isEmpty() || maxPlayers < 2 || maxPlayers > 4) {
-            creator.sendMessage("CREATE_ROOM_RESPONSE|false|잘못된 설정값입니다.");
+            creator.sendMessage(ServerMessage.CREATE_ROOM_RESPONSE + "|false|잘못된 설정값입니다.");
             return;
         }
 
@@ -115,11 +116,11 @@ public class GameServer {
         roomPlayers.put(roomId, players);
 
         String roomInfoStr = formatRoomInfo(room);
-        creator.sendMessage("CREATE_ROOM_RESPONSE|true|방이 생성되었습니다.|" + roomInfoStr + "|" + roomId);
+        creator.sendMessage(ServerMessage.CREATE_ROOM_RESPONSE + "|true|방이 생성되었습니다.|" + roomInfoStr + "|" + roomId);
         creator.setCurrentRoomId(roomId);
 
         String playerList = String.join(";", room.getPlayers());
-        broadcastToRoom(roomId, "PLAYER_UPDATE|" + roomId + "|" + room.getCurrentPlayers() + "|" + playerList);
+        broadcastToRoom(roomId, ServerMessage.PLAYER_UPDATE + "|" + roomId + "|" + room.getCurrentPlayers() + "|" + playerList);
 
         broadcastRoomList();
         logger.info("방 생성 완료: " + roomId + ", 방장: " + creator.getUsername());
@@ -128,22 +129,22 @@ public class GameServer {
     public synchronized void joinRoom(String roomId, ClientHandler client, String password) {
         GameRoom room = rooms.get(roomId);
         if (room == null) {
-            client.sendMessage("JOIN_ROOM_RESPONSE|false|존재하지 않는 방입니다.");
+            client.sendMessage(ServerMessage.JOIN_ROOM_RESPONSE + "|false|존재하지 않는 방입니다.");
             return;
         }
 
         if (room.isPasswordRequired() && !room.isPasswordValid(password)) {
-            client.sendMessage("JOIN_ROOM_RESPONSE|false|비밀번호가 일치하지 않습니다.");
+            client.sendMessage(ServerMessage.JOIN_ROOM_RESPONSE + "|false|비밀번호가 일치하지 않습니다.");
             return;
         }
 
         if (room.isFull()) {
-            client.sendMessage("JOIN_ROOM_RESPONSE|false|방이 가득 찼습니다.");
+            client.sendMessage(ServerMessage.JOIN_ROOM_RESPONSE + "|false|방이 가득 찼습니다.");
             return;
         }
 
         if (room.isInGame()) {
-            client.sendMessage("JOIN_ROOM_RESPONSE|false|이미 게임이 시작된 방입니다.");
+            client.sendMessage(ServerMessage.JOIN_ROOM_RESPONSE + "|false|이미 게임이 시작된 방입니다.");
             return;
         }
 
@@ -153,10 +154,10 @@ public class GameServer {
         client.setCurrentRoomId(roomId);
 
         String roomInfoStr = formatRoomInfo(room);
-        client.sendMessage("JOIN_ROOM_RESPONSE|true|방에 입장했습니다.|" + roomInfoStr);
+        client.sendMessage(ServerMessage.JOIN_ROOM_RESPONSE + "|true|방에 입장했습니다.|" + roomInfoStr);
 
         String playerList = String.join(";", room.getPlayers());
-        broadcastToRoom(roomId, "PLAYER_UPDATE|" + roomId + "|" + room.getCurrentPlayers() + "|" + playerList);
+        broadcastToRoom(roomId,  ServerMessage.PLAYER_UPDATE + "|" + roomId + "|" + room.getCurrentPlayers() + "|" + playerList);
 
         broadcastRoomList();
         logger.info(client.getUsername() + "님이 " + roomId + " 방에 입장했습니다.");
@@ -180,19 +181,19 @@ public class GameServer {
             rooms.remove(roomId);
             roomPlayers.remove(roomId);
             controllers.remove(roomId);
-            broadcast("ROOM_CLOSED|" + roomId + "|방이 닫혔습니다.");
+            broadcast(ServerMessage.ROOM_CLOSED + "|" + roomId + "|방이 닫혔습니다.");
         } else if (isHost) {
             ClientHandler newHost = players.iterator().next();
             room.setHostName(newHost.getUsername());
 
-            broadcastToRoom(roomId, "HOST_LEFT|" + roomId + "|이전 방장이 퇴장했습니다.");
-            broadcastToRoom(roomId, "NEW_HOST|" + roomId + "|" + newHost.getUsername());
+            broadcastToRoom(roomId, ServerMessage.HOST_LEFT + "|" + roomId + "|이전 방장이 퇴장했습니다.");
+            broadcastToRoom(roomId, ServerMessage.NEW_HOST + "|" + roomId + "|" + newHost.getUsername());
 
             String playerList = String.join(";", room.getPlayers());
-            broadcastToRoom(roomId, "PLAYER_UPDATE|" + roomId + "|" + room.getCurrentPlayers() + "|" + playerList);
+            broadcastToRoom(roomId, ServerMessage.PLAYER_UPDATE + "|" + roomId + "|" + room.getCurrentPlayers() + "|" + playerList);
         } else {
             String playerList = String.join(";", room.getPlayers());
-            broadcastToRoom(roomId, "PLAYER_UPDATE|" + roomId + "|" + room.getCurrentPlayers() + "|" + playerList);
+            broadcastToRoom(roomId, ServerMessage.PLAYER_UPDATE + "|" + roomId + "|" + room.getCurrentPlayers() + "|" + playerList);
         }
 
         broadcastRoomList();
@@ -201,7 +202,7 @@ public class GameServer {
 
     public void handleChat(String roomId, ClientHandler sender, String message) {
         if (rooms.containsKey(roomId)) {
-            broadcastToRoom(roomId, "CHAT|" + sender.getUsername() + "|" + message);
+            broadcastToRoom(roomId, ServerMessage.CHAT + "|" + sender.getUsername() + "|" + message);
         }
     }
 
@@ -221,24 +222,24 @@ public class GameServer {
                 }
             }
 
-            broadcastToRoom(roomId, "SETTINGS_UPDATED|" + roomId + "|" +
+            broadcastToRoom(roomId, ServerMessage.SETTINGS_UPDATE + "|" + roomId + "|" +
                     room.getGameMode().name() + "|" +
                     room.getDifficulty().name());
             broadcastRoomList();
         } catch (IllegalArgumentException e) {
-            updater.sendMessage("ERROR|잘못된 설정값입니다: " + e.getMessage());
+            updater.sendMessage(ServerMessage.ERROR + "|잘못된 설정값입니다: " + e.getMessage());
         }
     }
 
     public void startGame(String roomId, ClientHandler starter) {
         GameRoom room = rooms.get(roomId);
         if (room == null || !starter.getUsername().equals(room.getHostName())) {
-            starter.sendMessage("ERROR|게임을 시작할 권한이 없습니다.");
+            starter.sendMessage(ServerMessage.ERROR + "|게임을 시작할 권한이 없습니다.");
             return;
         }
 
         if (!room.canStart()) {
-            starter.sendMessage("ERROR|아직 게임을 시작할 수 없습니다.");
+            starter.sendMessage(ServerMessage.ERROR + "|아직 게임을 시작할 수 없습니다.");
             return;
         }
 
@@ -255,7 +256,7 @@ public class GameServer {
                     room.getDifficulty().name(),
                     String.join(";", room.getPlayers())
             ));
-            broadcastToRoom(roomId, "GAME_START");
+            broadcastToRoom(roomId, ServerMessage.GAME_START);
 
             controller.startGame();
             broadcastRoomList();
@@ -264,7 +265,7 @@ public class GameServer {
             logger.severe("게임 시작 중 오류 발생: " + e.getMessage());
             room.setGameStarted(false);
             room.setInGame(false);
-            broadcastToRoom(roomId, "ERROR|게임 시작 실패: " + e.getMessage());
+            broadcastToRoom(roomId, ServerMessage.ERROR + "|게임 시작 실패: " + e.getMessage());
         }
     }
 
@@ -275,33 +276,33 @@ public class GameServer {
         GameRoom room = rooms.get(roomId);
         if (room == null || !room.isInGame()) {
             logger.warning("유효하지 않은 게임 액션 시도 - 룸: " + roomId + ", 액션: " + action);
-            player.sendMessage("ERROR|유효하지 않은 게임 액션입니다.");
+            player.sendMessage(ServerMessage.ERROR + "|유효하지 않은 게임 액션입니다.");
             return;
         }
 
         ServerGameController controller = controllers.get(roomId);
         if (controller == null) {
             logger.warning("게임 컨트롤러를 찾을 수 없음 - 룸: " + roomId);
-            player.sendMessage("ERROR|게임 컨트롤러를 찾을 수 없습니다.");
+            player.sendMessage(ServerMessage.ERROR + "|게임 컨트롤러를 찾을 수 없습니다.");
             return;
         }
 
         try {
             switch (action) {
-                case "WORD_INPUT" -> {
+                case ClientCommand.WORD_INPUT -> {
                     if (params.length > 0) {
                         controller.handlePlayerInput(player, params[0]);
                     } else {
                         logger.warning("단어 입력 없음 - 플레이어: " + player.getUsername());
-                        player.sendMessage("ERROR|단어가 입력되지 않았습니다.");
+                        player.sendMessage(ServerMessage.ERROR + "|단어가 입력되지 않았습니다.");
                     }
                 }
-                case "WORD_MISSED" -> {
+                case ServerMessage.WORD_MISSED -> {
                     if (params.length > 0) {
                         controller.handleWordMissed(params[0], player);
                     } else {
                         logger.warning("놓친 단어 정보 없음 - 플레이어: " + player.getUsername());
-                        player.sendMessage("ERROR|놓친 단어 정보가 없습니다.");
+                        player.sendMessage(ServerMessage.ERROR + "|놓친 단어 정보가 없습니다.");
                     }
                 }
                 case "PLAYER_LEAVE_GAME" -> {
@@ -310,13 +311,13 @@ public class GameServer {
                 }
                 default -> {
                     logger.warning("알 수 없는 게임 액션: " + action + " - 플레이어: " + player.getUsername());
-                    player.sendMessage("ERROR|알 수 없는 게임 액션입니다.");
+                    player.sendMessage(ServerMessage.ERROR + "|알 수 없는 게임 액션입니다.");
                 }
             }
         } catch (Exception e) {
             logger.severe("게임 액션 처리 중 오류 발생: " + e.getMessage());
             e.printStackTrace();
-            player.sendMessage("ERROR|게임 액션 처리 중 오류가 발생했습니다.");
+            player.sendMessage(ServerMessage.ERROR + "|게임 액션 처리 중 오류가 발생했습니다.");
         }
     }
 
@@ -334,7 +335,7 @@ public class GameServer {
                 switch (leaderboardAction) {
                     case "GET_TOP" -> {
                         List<LeaderboardEntry> topEntries = leaderboardManager.getTopEntries(mode, difficulty);
-                        StringBuilder response = new StringBuilder("LEADERBOARD_DATA|TOP");
+                        StringBuilder response = new StringBuilder(ServerMessage.LEADERBOARD_DATA + "|TOP");
                         for (LeaderboardEntry entry : topEntries) {
                             response.append("|").append(entry.toFileString());
                         }
@@ -343,7 +344,7 @@ public class GameServer {
                     }
                     case "GET_MY_RECORDS" -> {
                         List<LeaderboardEntry> userEntries = leaderboardManager.getUserEntries(player.getUsername());
-                        StringBuilder response = new StringBuilder("LEADERBOARD_DATA|USER");
+                        StringBuilder response = new StringBuilder(ServerMessage.LEADERBOARD_DATA + "|USER");
                         for (LeaderboardEntry entry : userEntries) {
                             response.append("|").append(entry.toFileString());
                         }
@@ -352,19 +353,19 @@ public class GameServer {
                     }
                     default -> {
                         logger.warning("알 수 없는 리더보드 액션: " + leaderboardAction);
-                        player.sendMessage("ERROR|알 수 없는 리더보드 액션입니다.");
+                        player.sendMessage(ServerMessage.ERROR + "|알 수 없는 리더보드 액션입니다.");
                     }
                 }
             } catch (IllegalArgumentException e) {
                 logger.warning("잘못된 게임 모드 또는 난이도: " + e.getMessage());
-                player.sendMessage("ERROR|잘못된 게임 모드 또는 난이도입니다.");
+                player.sendMessage(ServerMessage.ERROR + "|잘못된 게임 모드 또는 난이도입니다.");
             } catch (Exception e) {
                 logger.severe("리더보드 처리 중 오류: " + e.getMessage());
-                player.sendMessage("ERROR|리더보드 처리 중 오류가 발생했습니다.");
+                player.sendMessage(ServerMessage.ERROR + "|리더보드 처리 중 오류가 발생했습니다.");
             }
         } else {
             logger.warning("잘못된 리더보드 요청 형식");
-            player.sendMessage("ERROR|리더보드 요청 형식이 잘못되었습니다.");
+            player.sendMessage(ServerMessage.ERROR + "|리더보드 요청 형식이 잘못되었습니다.");
         }
     }
 
@@ -405,7 +406,7 @@ public class GameServer {
     }
 
     public void broadcastUserCount() {
-        broadcast("USERS|" + clients.size());
+        broadcast(ServerMessage.USERS + "|" + clients.size());
     }
 
     private String formatRoomInfo(GameRoom room) {
