@@ -1,4 +1,7 @@
-// client/ui/theme/ColorScheme.java
+/*
+ * client.ui.theme.ColorScheme.java
+ * 색상 테마를 정의하는 클래스
+ */
 package client.ui.theme;
 
 import java.awt.Color;

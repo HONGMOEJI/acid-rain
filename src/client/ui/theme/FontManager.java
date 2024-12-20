@@ -1,3 +1,8 @@
+/**
+ * client.ui.theme.FontManager.java
+ * 폰트를 로드하고 캐싱하는 클래스 -> 이모지는 별도로 처리할 수 있도록 해야함 !
+ */
+
 package client.ui.theme;
 
 import java.awt.Font;

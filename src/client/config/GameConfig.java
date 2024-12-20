@@ -1,5 +1,5 @@
 /*
- * client/config/GameConfig.java
+ * client.config.GameConfig.java
  * 게임 설정값을 정의하는 클래스, 모든 설정 값이 이용되진 않지만, 추후 확장을 위해 작성됨
  */
 

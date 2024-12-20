@@ -1,9 +1,13 @@
-package client.event;
-
-/**
+/*
+ * client.event.GameEvent.java
  * 게임 내에서 발생하는 이벤트와 프로토콜 메시지를 정의하는 클래스
  * 서버-클라이언트 간 통신에 사용되는 모든 상수들을 체계적으로 관리
+ * 처음에 각 코드에서 정의해서 사용했으나, 중복 / 불일치가 발생하여 작성함
+ * 다만, 리팩터링 과정에서 누락된 부분이 있을 수 있음. 발견되는 대로 수정이 필요함...
  */
+
+package client.event;
+
 public class GameEvent {
     /*
      * ============================
@@ -72,7 +76,7 @@ public class GameEvent {
         public static final String GAME_ACTION = "GAME_ACTION";         // 게임 액션
 
         // 채팅 관련 커맨드
-        public static final String CHAT = "CHAT";                       // 채팅 메시지 전송
+        public static final String CHAT = "CHAT";                       // 채팅 메시지 전송 ** 서로 다름 **
 
         // must be removed ...
         public static final String USERS_REQUEST = "USERS_REQUEST";     // 전체 유저수 요청
@@ -108,7 +112,7 @@ public class GameEvent {
         public static final String GAME_START = "GAME_START";              // 게임 시작 알림
 
         // 채팅 메시지
-        public static final String CHAT = "CHAT";                          // 채팅 메시지 알림
+        public static final String CHAT = "CHAT";                          // 채팅 메시지 알림 ** 서로 다름 **
 
         // 리더보드 관련 메시지
         public static final String LEADERBOARD_DATA = "LEADERBOARD_DATA";     // 리더보드 데이터

@@ -1,4 +1,8 @@
-// client/ui/theme/StyleManager.java
+/*
+ * client.ui.theme.StyleManager.java
+ * UI 컴포넌트의 스타일을 일관되게 적용하는 클래스
+ */
+
 package client.ui.theme;
 
 import javax.swing.*;
