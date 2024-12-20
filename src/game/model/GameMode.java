@@ -1,4 +1,7 @@
-// game/model/GameMode.java
+/*
+ * game.model.GameMode.java
+ * 게임의 프로그래밍 언어 모드를 나타내는 열거형
+ */
 package game.model;
 
 public enum GameMode {

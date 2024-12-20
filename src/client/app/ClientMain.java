@@ -1,4 +1,7 @@
-// Main entry point
+/*
+ * client.app.ClientMain.java
+ * 게임 기본 진입점
+ */
 package client.app;
 
 import client.ui.dialog.LoginDialog;

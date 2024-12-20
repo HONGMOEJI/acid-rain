@@ -1,3 +1,7 @@
+/*
+ * game.model.GameStatus.java
+ * 게임의 상태를 나타내는 열거형
+ */
 package game.model;
 
 public enum GameStatus {

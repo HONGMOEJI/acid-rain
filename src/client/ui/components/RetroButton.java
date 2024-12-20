@@ -1,4 +1,7 @@
-// client/ui/components/RetroButton.java
+/*
+ * client.ui.components.RetroButton.java
+ * 레트로한 디자인의 버튼 컴포넌트
+ */
 package client.ui.components;
 
 import client.ui.theme.ColorScheme;

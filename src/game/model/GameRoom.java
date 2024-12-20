@@ -1,3 +1,8 @@
+/*
+ * game.model.GameRoom.java
+ * 게임 방을 나타내기 위한 모델 클래스
+ */
+
 package game.model;
 
 import java.util.ArrayList;

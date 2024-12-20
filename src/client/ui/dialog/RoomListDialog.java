@@ -1,8 +1,14 @@
+/*
+ * client.ui.dialog.RoomListDialog.java
+ * 게임 방 목록을 표시하는 다이얼로그 창을 정의하는 클래스
+*/
+
 package client.ui.dialog;
 
 import client.app.GameClient;
 import client.event.GameEvent;
 import client.event.GameEventListener;
+import client.ui.MainMenu;
 import client.ui.components.RetroButton;
 import client.ui.game.GameLobby;
 import client.ui.theme.ColorScheme;
@@ -14,7 +20,6 @@ import javax.swing.border.EmptyBorder;
 import javax.swing.plaf.basic.BasicScrollBarUI;
 import java.awt.*;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
@@ -149,6 +154,7 @@ public class RoomListDialog extends BaseDialog implements GameEventListener {
         return panel;
     }
 
+    // 키보드 단축키 설정
     private void setupKeyboardShortcuts(JButton refreshButton, JButton createButton,
                                         JButton joinButton, JButton backButton) {
         getRootPane().registerKeyboardAction(
@@ -190,11 +196,13 @@ public class RoomListDialog extends BaseDialog implements GameEventListener {
         });
     }
 
+    // 방 목록 새로고침
     public void refreshRoomList() {
         statusLabel.setText("방 목록을 새로고치는 중...");
         client.sendMessage("ROOM_LIST");
     }
 
+    // 방 만들기 다이얼로그 표시
     private void showCreateRoomDialog() {
         CreateRoomDialog dialog = new CreateRoomDialog(this);
         dialog.setVisible(true);
@@ -204,6 +212,7 @@ public class RoomListDialog extends BaseDialog implements GameEventListener {
         }
     }
 
+    // 선택한 방에 입장
     private void joinSelectedRoom() {
         RoomListItem selectedItem = roomList.getSelectedValue();
         if (selectedItem == null) {
@@ -239,6 +248,7 @@ public class RoomListDialog extends BaseDialog implements GameEventListener {
         }
     }
 
+    // 비밀번호 입력 다이얼로그 표시
     private void showPasswordDialog(GameRoom room) {
         JPanel panel = new JPanel(new BorderLayout(10, 10));
         panel.setPreferredSize(new Dimension(250, 80));
@@ -270,14 +280,29 @@ public class RoomListDialog extends BaseDialog implements GameEventListener {
         }
     }
 
+    // 다이얼로그 닫기
     private void handleClose() {
         if (!isClosing) {
             isClosing = true;
             if (refreshTimer != null) {
                 refreshTimer.stop();
             }
-            client.setEventListener(null);
-            mainFrame.setVisible(true);
+
+            // MainMenu 생성 및 설정
+            MainMenu mainMenu = new MainMenu(client);
+            client.setEventListener(mainMenu);
+
+            // mainFrame 업데이트
+            if (mainFrame != null) {
+                mainFrame.getContentPane().removeAll();
+                mainFrame.add(mainMenu);
+                mainFrame.setSize(800, 600);
+                mainFrame.setLocationRelativeTo(null);
+                mainFrame.revalidate();
+                mainFrame.repaint();
+                mainFrame.setVisible(true);
+            }
+
             dispose();
         }
     }
@@ -291,6 +316,7 @@ public class RoomListDialog extends BaseDialog implements GameEventListener {
         }
     }
 
+    // 게임 방에 관련된 정보 관리
     private GameRoom findRoomById(String roomId) {
         return rooms.stream()
                 .filter(room -> room.getRoomId().equals(roomId))

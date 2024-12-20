@@ -1,3 +1,8 @@
+/*
+ * client.ui.dialog.CreateRoomDialog.java
+ * 방을 만들기 위한 다이얼로그 창을 정의하는 클래스, 방 생성 시 필요한 정보를 입력받음
+ */
+
 package client.ui.dialog;
 
 import client.ui.components.GameTextField;

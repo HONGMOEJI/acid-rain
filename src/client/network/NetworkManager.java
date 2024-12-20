@@ -1,3 +1,9 @@
+/*
+ * client.network.NetworkManager.java
+ * 네트워크 연결을 관리하는 클래스, 서버와의 연결을 담당, 가장 중요한 클래스! 소켓 통신의 꽃, 다만 사용하진 않았음
+ * 추후, 확장시 네트워크 관련 매니저를 이용해 사용하는 것이 좋을 것 같아 작성함.
+ */
+
 package client.network;
 
 import java.io.*;

@@ -153,15 +153,18 @@ public class ClientHandler implements Runnable {
     }
 
     private void handleGameAction(String[] parts) {
-        if (parts.length >= 3 && currentRoomId != null) {
-            String action = parts[1];
-            String[] params = new String[parts.length - 2];
-            System.arraycopy(parts, 2, params, 0, params.length);
-            server.handleGameAction(currentRoomId, this, action, params);
+        if (parts.length >= 3) {
+            String roomId = parts[1];
+            String action = parts[2];
+            String[] params = new String[parts.length - 3];
+            System.arraycopy(parts, 3, params, 0, parts.length - 3);
+
+            server.handleGameAction(roomId, this, action, params);
         } else {
-            sendMessage("ERROR|잘못된 게임 액션입니다.");
+            sendMessage("ERROR|잘못된 게임 액션 요청입니다.");
         }
     }
+
 
     private void handlePlayerList(String[] parts) {
         if (parts.length >= 2) {

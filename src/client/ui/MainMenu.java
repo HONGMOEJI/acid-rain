@@ -1,8 +1,14 @@
+/*
+ * client.ui.MainMenu.java
+ * 메인 메뉴 화면을 구성하는 클래스
+ */
+
 package client.ui;
 
 import client.app.GameClient;
 import client.event.GameEvent;
 import client.event.GameEventListener;
+import client.ui.dialog.LeaderboardDialog;
 import client.ui.dialog.RoomListDialog;
 import client.ui.theme.ColorScheme;
 import client.ui.theme.FontManager;
@@ -161,7 +167,22 @@ public class MainMenu extends JPanel implements GameEventListener {
     }
 
     private void showRanking() {
-        JOptionPane.showMessageDialog(this, "랭킹 기능은 준비 중입니다.");
+        JFrame currentFrame = (JFrame) SwingUtilities.getWindowAncestor(this);
+        LeaderboardDialog leaderboardDialog = new LeaderboardDialog(currentFrame, client);
+
+        // 현재 이벤트 리스너 (this) 임시 저장
+        GameEventListener currentListener = this;
+
+        // 리더보드 다이얼로그 표시
+        leaderboardDialog.addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowClosed(WindowEvent e) {
+                // 다이얼로그가 닫힐 때 메인 메뉴의 이벤트 리스너로 복원
+                client.setEventListener(currentListener);
+            }
+        });
+
+        leaderboardDialog.setVisible(true);
     }
 
     @Override

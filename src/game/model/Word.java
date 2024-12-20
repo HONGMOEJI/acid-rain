@@ -1,3 +1,8 @@
+/*
+ * game.model.Word.java
+ * 단어를 나타내기 위한 모델 클래스
+ */
+
 package game.model;
 
 import java.awt.Color;

@@ -1,3 +1,8 @@
+/*
+ * game.model.PlayerScore.java
+ * 플레이어의 점수를 나타내기 위한 모델 클래스
+ */
+
 package game.model;
 
 import java.time.LocalDateTime;

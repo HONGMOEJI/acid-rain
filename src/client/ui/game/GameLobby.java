@@ -1,8 +1,14 @@
+/*
+ * client.ui.game.GameLobby.java
+ * 게임 로비 화면을 정의하는 클래스, 게임 시작 전 플레이어들이 모이는 곳, 채팅 가능
+ */
+
 package client.ui.game;
 
 import client.app.GameClient;
 import client.event.GameEvent;
 import client.event.GameEventListener;
+import client.ui.MainMenu;
 import client.ui.theme.ColorScheme;
 import client.ui.theme.FontManager;
 import client.ui.components.GameTextField;
@@ -12,7 +18,6 @@ import game.model.DifficultyLevel;
 import game.model.GameRoom;
 
 import javax.swing.*;
-import javax.swing.border.EmptyBorder;
 import javax.swing.plaf.basic.BasicScrollBarUI;
 import java.awt.*;
 import java.awt.event.*;
@@ -428,9 +433,12 @@ public class GameLobby extends JFrame implements GameEventListener {
 
         if (option == JOptionPane.YES_OPTION) {
             isClosing = true;
+
+            // 방 나가기 처리
             client.sendLeaveRoomRequest(room.getRoomId());
-            mainFrame.setVisible(true);
-            dispose();
+
+            // MainMenu로 전환
+            transitionToMainMenu();
         }
     }
 
@@ -617,9 +625,8 @@ public class GameLobby extends JFrame implements GameEventListener {
     private void handleRoomClosed(Object... data) {
         if (!isClosing) {
             isClosing = true;
-            dispose();
-            mainFrame.setVisible(true);
 
+            // 메시지 표시
             if (data.length >= 2) {
                 String roomId = (String) data[0];
                 String reason = (String) data[1];
@@ -629,7 +636,32 @@ public class GameLobby extends JFrame implements GameEventListener {
                         "방 종료",
                         JOptionPane.INFORMATION_MESSAGE);
             }
+
+            // MainMenu로 전환
+            transitionToMainMenu();
         }
+    }
+
+    private void transitionToMainMenu() {
+        SwingUtilities.invokeLater(() -> {
+            // MainMenu 생성 및 설정
+            MainMenu mainMenu = new MainMenu(client);
+            client.setEventListener(mainMenu);
+
+            // mainFrame 업데이트
+            if (mainFrame != null) {
+                mainFrame.getContentPane().removeAll();
+                mainFrame.add(mainMenu);
+                mainFrame.setSize(800, 600);
+                mainFrame.setLocationRelativeTo(null);
+                mainFrame.revalidate();
+                mainFrame.repaint();
+                mainFrame.setVisible(true);
+            }
+
+            // GameLobby 창 닫기
+            dispose();
+        });
     }
 
     private void handleError(Object... data) {

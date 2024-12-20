@@ -266,7 +266,30 @@ public class GameServer {
         }
     }
 
+    /*
+     * GAME_ACTION 메시지를 처리하는 메서드.
+     * 기존에는 리더보드 요청을 별도의 LEADERBOARD_REQUEST 메시지로 받았으나,
+     * 이제는 GAME_ACTION 아래에 LEADERBOARD 액션으로 통합되었으므로
+     * 여기서 처리한다.
+     */
     public void handleGameAction(String roomId, ClientHandler player, String action, String... params) {
+        // LEADERBOARD 처리 부분 (기존 코드 유지)
+        if ("LEADERBOARD".equals(action)) {
+            if (params.length >= 3) {
+                String leaderboardAction = params[0];
+                String modeStr = params[1];
+                String diffStr = params[2];
+                ServerGameController controller = controllers.get(roomId);
+                if (controller != null) {
+                    controller.handleLeaderboardAction(player, leaderboardAction, modeStr, diffStr);
+                }
+            } else {
+                player.sendMessage("ERROR|리더보드 요청 형식이 잘못되었습니다.");
+            }
+            return;
+        }
+
+        // 게임 액션 처리
         GameRoom room = rooms.get(roomId);
         if (room == null || !room.isInGame()) {
             player.sendMessage("ERROR|유효하지 않은 게임 액션입니다.");
@@ -279,15 +302,34 @@ public class GameServer {
             return;
         }
 
-        switch (action) {
-            case "WORD_INPUT":
-                if (params.length > 0) {
-                    controller.handlePlayerInput(player, params[0]);
+        try {
+            switch (action) {
+                case "WORD_INPUT" -> {
+                    if (params.length > 0) {
+                        controller.handlePlayerInput(player, params[0]);
+                    } else {
+                        player.sendMessage("ERROR|단어가 입력되지 않았습니다.");
+                    }
                 }
-                break;
-            default:
-                logger.warning("알 수 없는 게임 액션: " + action);
-                player.sendMessage("ERROR|알 수 없는 게임 액션입니다.");
+                case "WORD_MISSED" -> {
+                    if (params.length > 0) {
+                        controller.handleWordMissed(params[0], player);
+                    } else {
+                        player.sendMessage("ERROR|놓친 단어 정보가 없습니다.");
+                    }
+                }
+                case "PLAYER_LEAVE_GAME" -> {
+                    // 플레이어 퇴장 처리 추가
+                    controller.handlePlayerLeaveGame(player);
+                }
+                default -> {
+                    logger.warning("알 수 없는 게임 액션: " + action);
+                    player.sendMessage("ERROR|알 수 없는 게임 액션입니다.");
+                }
+            }
+        } catch (Exception e) {
+            logger.severe("게임 액션 처리 중 오류 발생: " + e.getMessage());
+            player.sendMessage("ERROR|게임 액션 처리 중 오류가 발생했습니다.");
         }
     }
 

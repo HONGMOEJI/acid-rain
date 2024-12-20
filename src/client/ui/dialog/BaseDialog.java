@@ -1,4 +1,8 @@
-// client/ui/dialog/BaseDialog.java
+ /*
+  * client.ui.dialog.BaseDialog.java
+  * 다이얼로그 창의 기본 틀을 정의하는 Base 클래스
+  */
+
 package client.ui.dialog;
 
 import client.ui.theme.ColorScheme;

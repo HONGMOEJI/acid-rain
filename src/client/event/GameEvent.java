@@ -1,4 +1,7 @@
-// GameEvent.java
+/*
+ * client.event.GameEvent.java
+ * 게임 내에서 발생하는 이벤트를 정의하는 클래스, 모든 이벤트가 이용되진 않지만, 추후 확장을 위해 작성됨
+ */
 package client.event;
 
 public class GameEvent {
@@ -34,4 +37,9 @@ public class GameEvent {
     // 오류 이벤트
     public static final String ERROR_OCCURRED = "ERROR_OCCURRED";
     public static final String CONNECTION_LOST = "CONNECTION_LOST";
+
+    // 리더보드 관련 이벤트
+    public static final String LEADERBOARD_UPDATE = "LEADERBOARD_UPDATE";
+    public static final String TOP_SCORES = "TOP_SCORES";
+    public static final String USER_RECORDS = "USER_RECORDS";
 }

@@ -1,4 +1,7 @@
-// client/ui/dialog/LoginDialog.java
+/*
+ * client.ui.dialog.LoginDialog.java
+ * 로그인을 위한 다이얼로그 창을 정의하는 클래스, 로그인 시 필요한 정보를 입력받음
+ */
 package client.ui.dialog;
 
 import client.ui.components.GameTextField;

@@ -1,4 +1,7 @@
-// client/ui/components/GameTextField.java
+/*
+ * client.ui.components.GameTextField.java
+ * 프로그램 전반적으로 사용하는 기본 텍스트 필드 정의
+ */
 package client.ui.components;
 
 import client.ui.theme.ColorScheme;

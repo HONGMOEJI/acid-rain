@@ -1,4 +1,7 @@
-// game/model/DifficultyLevel.java
+/*
+ * game.model.DifficultyLevel.java
+ * 게임의 난이도를 나타내는 열거형
+ */
 package game.model;
 
 public enum DifficultyLevel {
