@@ -115,7 +115,7 @@ public class MainMenu extends JPanel implements GameEventListener {
         raindrops.add(new Raindrop());
     }
 
-    // Raindrop 관련 클래스와 함수, 끝
+    // Raindrop 관련 클래스와 메서드, 끝
 
 
     private void initializeUI() {
