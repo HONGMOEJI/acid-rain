@@ -46,7 +46,7 @@ public class GameLobby extends JFrame implements GameEventListener {
         this.client = client;
         this.mainFrame = mainFrame;
 
-        // UI 초기화
+        // UI 초기화 및 단축키 설정
         initializeFrame();
         setupUI();
         setupKeyboardShortcuts();
@@ -303,6 +303,13 @@ public class GameLobby extends JFrame implements GameEventListener {
         });
     }
 
+    /**
+     * 플레이어 목록을 UI에 업데이트하는 메서드
+     * 모든 플레이어를 표시하며 방장은 왕관 이모지(👑)로 구분
+     *
+     * @param players 업데이트할 플레이어 배열
+     * @throws IllegalStateException 이 메서드가 이벤트 디스패치 스레드가 아닌 스레드에서 호출될 경우
+     */
     private void updatePlayerList(String[] players) {
         if (!SwingUtilities.isEventDispatchThread()) {
             SwingUtilities.invokeLater(() -> updatePlayerList(players));
@@ -367,6 +374,13 @@ public class GameLobby extends JFrame implements GameEventListener {
         });
     }
 
+    /**
+     * 새로운 방장 지정 시 UI를 업데이트하는 메서드
+     *
+     * @param isNewHost 새 방장 여부
+     * - true: 게임 시작 버튼 추가, 설정 변경 가능
+     * - false: 게임 시작 버튼 제거, 설정 변경 불가
+     */
     private void updateUIForHostStatus(boolean isNewHost) {
         SwingUtilities.invokeLater(() -> {
             gameModeCombo.setEnabled(isNewHost);
@@ -404,6 +418,14 @@ public class GameLobby extends JFrame implements GameEventListener {
         }
     }
 
+    /**
+     * 게임 시작 요청을 처리하는 메서드
+     * 시작 조건을 검증하고 사용자 확인을 거친 후 게임 시작
+     *
+     * - 최소 2명의 플레이어가 필요
+     * - 방장만 시작 가능
+     * - 시작 전 확인 대화상자 표시
+     */
     private void startGame() {
         if (!room.canStart()) {
             JOptionPane.showMessageDialog(this,
@@ -423,6 +445,15 @@ public class GameLobby extends JFrame implements GameEventListener {
         }
     }
 
+    /**
+     * 방 나가기/닫기 처리를 담당하는 메서드
+     * 방장과 일반 참가자를 구분하여 다른 메시지 표시
+     *
+     * - 방장: "방을 닫으시겠습니까?"
+     * - 참가자: "방에서 나가시겠습니까?"
+     * - 확인 시 서버에 나가기 요청 전송
+     * - MainMenu로 화면 전환
+     */
     private void handleLeaveRoom() {
         if (isClosing) return;
 
@@ -503,6 +534,15 @@ public class GameLobby extends JFrame implements GameEventListener {
         comboBox.setBorder(BorderFactory.createLineBorder(ColorScheme.PRIMARY));
     }
 
+    /**
+     * 게임 로비에서 발생하는 각종 이벤트를 처리하는 메서드
+     *
+     * @param eventType 발생한 이벤트의 타입 (예: 플레이어 업데이트, 채팅 수신 등)
+     * @param data 이벤트와 관련된 데이터를 담은 가변 인자 배열
+     *            - 플레이어 업데이트: roomId, playerCount, players[]
+     *            - 채팅 수신: username, message
+     *            - 설정 업데이트: roomId, gameMode, difficulty
+     */
     @Override
     public void onGameEvent(String eventType, Object... data) {
         if (!SwingUtilities.isEventDispatchThread()) {

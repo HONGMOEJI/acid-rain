@@ -1,3 +1,11 @@
+/*
+ * server.game.ServerGameState.java
+ * 게임 방의 상태를 관리
+ * - 각 플레이어의 점수, pH를 관리
+ * - 현재 활성화된 단어 목록을 관리
+ * - 게임 시작/종료/진행 상태 관리
+ */
+
 package server.game;
 
 import game.model.GameMode;
@@ -10,12 +18,6 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Logger;
 
-/**
- * ServerGameState는 서버 측에서 해당 게임 방의 상태를 관리한다.
- * - 각 플레이어의 점수, pH를 관리
- * - 현재 활성화된 단어 목록을 관리
- * - 게임 시작/종료/진행 상태 관리
- */
 public class ServerGameState {
     private static final Logger logger = Logger.getLogger(ServerGameState.class.getName());
     private static final double INITIAL_PH = 7.0;

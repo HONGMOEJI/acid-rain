@@ -1,6 +1,7 @@
 /*
  * client.ui.theme.StyleManager.java
  * UI 컴포넌트의 스타일을 일관되게 적용하는 클래스
+ * -> 확장에 대비 하세요 ! -> 다만 이번 프로젝트에서 실질적으로 사용하지 않았음.
  */
 
 package client.ui.theme;

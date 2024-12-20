@@ -1,18 +1,15 @@
 package server.game;
 
 import client.event.GameEvent.ServerMessage;
-import game.model.GameMode;
 import game.model.DifficultyLevel;
 import game.model.GameRoom;
 import game.model.GameStatus;
 import game.model.Word;
-import game.model.LeaderboardEntry;
 
 import server.GameServer;
 import server.ClientHandler;
 
 import java.util.concurrent.*;
-import java.util.List;
 import java.util.logging.Logger;
 
 public class ServerGameController {
@@ -23,12 +20,13 @@ public class ServerGameController {
     private final ServerWordManager wordManager;
     private final LeaderboardManager leaderboardManager;
 
+    // 스케줄링을 위한 스레드 풀 -> 단어 생성, pH 체크
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(2);
     private ScheduledFuture<?> spawnTask;
     private ScheduledFuture<?> phCheckTask;
 
     private static final double PH_CHECK_INTERVAL = 1.0; // 초
-    private static final double PH_DECREASE_AMOUNT = 0.5;
+    private static final double PH_DECREASE_AMOUNT = 0.2;
     private static final int BLIND_EFFECT_DURATION = 5000; // 5초
 
     public ServerGameController(GameServer server, GameRoom room) {
@@ -144,7 +142,7 @@ public class ServerGameController {
                                 // BLIND_EFFECT 메시지 전송 (예: 5초=5000ms)
                                 server.broadcastToRoom(room.getRoomId(),
                                         String.format(ServerMessage.BLIND_EFFECT + "|%s|%s|%d",
-                                                room.getRoomId(), opponent, 5000));
+                                                room.getRoomId(), opponent, BLIND_EFFECT_DURATION));
                             }
                             break;
                         case SCORE_BOOST:
@@ -167,9 +165,10 @@ public class ServerGameController {
 
                 // 모든 플레이어의 pH 감소
                 for (String playerName : room.getPlayers()) {
-                    gameState.decreasePH(playerName, 0.2);  // 단어 놓칠 때마다 0.2 감소
+                    gameState.decreasePH(playerName, PH_DECREASE_AMOUNT);  // 단어 놓칠 때마다 0.2 감소
                     double newPH = gameState.getPlayerPH(playerName);
 
+                    // pH 감소 메시지 전송
                     server.broadcastToRoom(room.getRoomId(),
                             String.format(ServerMessage.WORD_MISSED + "|%s|%s|%s|%.2f",
                                     room.getRoomId(), word, playerName, newPH));
@@ -221,6 +220,7 @@ public class ServerGameController {
         }
     }
 
+    // 게임 종료 처리
     private void handleGameOver() {
         if (gameState.getStatus() != GameStatus.IN_PROGRESS) return;
 
