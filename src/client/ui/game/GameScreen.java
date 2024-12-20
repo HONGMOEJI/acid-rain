@@ -190,22 +190,23 @@ public class GameScreen extends JFrame implements GameEventListener {
         g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING,
                 RenderingHints.VALUE_ANTIALIAS_ON);
 
-        // 먼저 단어들을 그리고
         g2d.setFont(FontManager.getFont(16f));
 
         synchronized(activeWords) {
             for (Word word : activeWords) {
                 if (word.hasSpecialEffect()) {
+                    g2d.setFont(FontManager.getEmojiFont(16f));
                     if (word.getEffect() == Word.SpecialEffect.SCORE_BOOST) {
                         g2d.setColor(new Color(255, 215, 0));
                         g2d.drawString("⚡", word.getX() - 25, word.getY());
                     } else {
                         g2d.setColor(new Color(147, 112, 219));
-                        g2d.drawString("🌟", word.getX() - 25, word.getY());
+                        g2d.drawString("⭐", word.getX() - 25, word.getY());  // 🌟 대신 ⭐ 사용
                     }
-                } else {
-                    g2d.setColor(Color.WHITE);
+                    g2d.setFont(FontManager.getFont(16f));
                 }
+
+                g2d.setColor(Color.WHITE);
                 g2d.drawString(word.getText(), word.getX(), word.getY());
             }
         }
@@ -374,11 +375,7 @@ public class GameScreen extends JFrame implements GameEventListener {
                     "게임 종료",
                     JOptionPane.INFORMATION_MESSAGE);
 
-            client.setEventListener(null);
-            if (mainFrame != null) {
-                mainFrame.setVisible(true);
-            }
-            dispose();
+            returnToMainMenu(); // 메인 메뉴 복귀 메서드 호출
         });
     }
 
@@ -398,11 +395,11 @@ public class GameScreen extends JFrame implements GameEventListener {
                         String.format("상대방이 게임을 나가서 승리했습니다!\n내 점수: %d\n상대방 점수: %d",
                                 finalMyScore, finalOppScore) :
                         String.format("승리!\n내 점수: %d\n상대방 점수: %d",
-                                finalOppScore, finalMyScore);
+                                finalMyScore, finalOppScore);
             } else {
                 resultMessage = isForfeit ?
                         String.format("게임을 나가서 패배했습니다...\n내 점수: %d\n상대방 점수: %d",
-                                finalMyScore, finalOppScore) :
+                                finalOppScore, finalMyScore) :
                         String.format("패배...\n내 점수: %d\n상대방 점수: %d",
                                 finalOppScore, finalMyScore);
             }
@@ -446,22 +443,17 @@ public class GameScreen extends JFrame implements GameEventListener {
                 // 방 나가기 처리
                 client.sendMessage("LEAVE_ROOM|" + roomId);
 
-                // 새로운 MainMenu 인스턴스 생성
+                // 새로운 MainMenu 인스턴스를 생성해서 현재 프레임에 표시
                 MainMenu mainMenu = new MainMenu(client);
                 client.setEventListener(mainMenu);
 
-                // mainFrame 업데이트
-                JFrame mainFrame = (JFrame) SwingUtilities.getWindowAncestor(this);
-                if (mainFrame != null) {
-                    mainFrame.getContentPane().removeAll();
-                    mainFrame.add(mainMenu);
-                    mainFrame.revalidate();
-                    mainFrame.repaint();
-                    mainFrame.setVisible(true);
-                }
+                // 현재 GameScreen 프레임의 내용을 모두 제거하고 MainMenu를 추가
+                getContentPane().removeAll();
+                add(mainMenu, BorderLayout.CENTER);
+                revalidate();
+                repaint();
+                setTitle("메인 메뉴");
 
-                // 현재 게임 화면 정리
-                dispose();
             } catch (Exception e) {
                 logger.severe("메인 메뉴 복귀 중 오류: " + e.getMessage());
                 JOptionPane.showMessageDialog(this,
@@ -471,6 +463,7 @@ public class GameScreen extends JFrame implements GameEventListener {
             }
         });
     }
+
 
     @Override
     public void dispose() {

@@ -8,9 +8,34 @@ import java.util.Map;
 public class FontManager {
     private static final Map<String, Font> fontCache = new HashMap<>();
     private static final String DEFAULT_FONT_RESOURCE = "/fonts/DungGeunMo.ttf";
+    private static Font emojiFont = null;  // 이모지 폰트를 캐시할 변수
 
     public static Font getFont(float size) {
         return getCustomFont(DEFAULT_FONT_RESOURCE, size);
+    }
+
+    public static Font getEmojiFont(float size) {
+        if (emojiFont == null) {
+            Font[] candidates = {
+                    new Font("Segoe UI Emoji", Font.PLAIN, (int)size),    // Windows
+                    new Font("Apple Color Emoji", Font.PLAIN, (int)size),  // macOS
+                    new Font("Noto Color Emoji", Font.PLAIN, (int)size),  // Linux
+                    new Font("Noto Emoji", Font.PLAIN, (int)size)         // 대체 폰트
+            };
+
+            for (Font font : candidates) {
+                if (font.canDisplayUpTo("⚡") == -1 && font.canDisplayUpTo("⭐") == -1) {
+                    emojiFont = font;
+                    break;
+                }
+            }
+
+            if (emojiFont == null) {
+                emojiFont = candidates[0];
+            }
+        }
+
+        return emojiFont.deriveFont(size);
     }
 
     public static Font getCustomFont(String resourcePath, float size) {

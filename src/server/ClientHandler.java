@@ -90,6 +90,16 @@ public class ClientHandler implements Runnable {
                 case "LOGOUT":
                     handleLogout();
                     break;
+
+                case "LEADERBOARD_ACTION":
+                    handleLeaderboardAction(parts);
+                    break;
+
+                // must be removed after refactoring
+                case "USERS_REQUEST":
+                    server.broadcastUserCount();
+                    break;
+
                 default:
                     logger.warning("알 수 없는 메시지 타입: " + messageType);
                     sendMessage("ERROR|지원하지 않는 메시지 타입입니다.");
@@ -152,19 +162,27 @@ public class ClientHandler implements Runnable {
         }
     }
 
+    private void handleLeaderboardAction(String[] parts) {
+        if (parts.length >= 4) {
+            String[] params = new String[parts.length - 1];
+            System.arraycopy(parts, 1, params, 0, parts.length - 1);
+            server.handleLeaderboardAction(this, params);
+        } else {
+            sendMessage("ERROR|잘못된 리더보드 액션 요청입니다.");
+        }
+    }
+
     private void handleGameAction(String[] parts) {
         if (parts.length >= 3) {
             String roomId = parts[1];
             String action = parts[2];
             String[] params = new String[parts.length - 3];
             System.arraycopy(parts, 3, params, 0, parts.length - 3);
-
             server.handleGameAction(roomId, this, action, params);
         } else {
             sendMessage("ERROR|잘못된 게임 액션 요청입니다.");
         }
     }
-
 
     private void handlePlayerList(String[] parts) {
         if (parts.length >= 2) {

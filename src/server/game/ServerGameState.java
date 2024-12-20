@@ -83,7 +83,7 @@ public class ServerGameState {
         }
     }
 
-    public boolean matchWord(String typedWord, String player) {
+    public Word matchWord(String typedWord, String player) {
         synchronized (this) {
             Optional<Word> matched = activeWords.stream()
                     .filter(w -> w.getText().equals(typedWord))
@@ -93,26 +93,20 @@ public class ServerGameState {
                 Word word = matched.get();
                 activeWords.remove(word);
 
-                // 점수 계산
+                // 점수 계산 및 pH 변경 로직
                 int basePoints = calculateBasePoints(word);
                 int finalPoints = calculateFinalPoints(word, basePoints);
-
-                // 맞춘 플레이어의 점수 증가 및 pH 회복
                 addScore(player, finalPoints);
-                adjustPH(player, 0.3); // pH 회복량 증가
+                adjustPH(player, 0.3);
 
-                // 상대 플레이어의 pH 감소
                 String opponent = getOpponentOf(player);
                 if (opponent != null) {
-                    decreasePH(opponent, 0.2); // 상대방 pH 감소
+                    decreasePH(opponent, 0.2);
                 }
 
-                logger.info(String.format("단어 매칭 성공 - 플레이어: %s, 단어: %s, 점수: %d",
-                        player, typedWord, finalPoints));
-
-                return true;
+                return word; // 매칭된 단어 반환
             }
-            return false;
+            return null;
         }
     }
 

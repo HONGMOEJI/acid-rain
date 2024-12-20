@@ -77,36 +77,30 @@ public class LeaderboardEntry implements Comparable<LeaderboardEntry> {
                 difficulty.getDisplayName(), timestamp);
     }
 
-    // 문자열로부터 LeaderboardEntry 객체 생성 (파일에서 읽을 때 사용)
-    public static LeaderboardEntry fromString(String str) {
-        String[] parts = str.split(",");
-        if (parts.length < 5) {
-            throw new IllegalArgumentException("Invalid leaderboard entry format: " + str);
-        }
-
-        try {
-            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-            GameMode mode = GameMode.valueOf(parts[2].trim().toUpperCase());
-            DifficultyLevel diff = DifficultyLevel.valueOf(parts[3].trim().toUpperCase());
-            LocalDateTime timestamp = LocalDateTime.parse(parts[4].trim(), formatter);
-
-            return new LeaderboardEntry(
-                    parts[0].trim(), // username
-                    Integer.parseInt(parts[1].trim()), // score
-                    mode,
-                    diff,
-                    timestamp
-            );
-        } catch (Exception e) {
-            throw new IllegalArgumentException("Failed to parse leaderboard entry: " + str, e);
-        }
-    }
-
-    // 파일에 저장하기 위한 형식으로 변환
     public String toFileString() {
         return String.format("%s,%d,%s,%s,%s",
-                username, score, gameMode.name(),
-                difficulty.name(), timestamp);
+                username, score, gameMode.name(), difficulty.name(),
+                timestamp.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
+    }
+
+    public static LeaderboardEntry fromString(String str) {
+        try {
+            String[] fields = str.split(",");
+            if (fields.length != 5) {
+                throw new IllegalArgumentException("필드 수가 잘못되었습니다: " + fields.length);
+            }
+
+            String username = fields[0].trim();
+            int score = Integer.parseInt(fields[1].trim());
+            GameMode mode = GameMode.valueOf(fields[2].trim());
+            DifficultyLevel difficulty = DifficultyLevel.valueOf(fields[3].trim());
+            LocalDateTime timestamp = LocalDateTime.parse(fields[4].trim(),
+                    DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+
+            return new LeaderboardEntry(username, score, mode, difficulty, timestamp);
+        } catch (Exception e) {
+            throw new IllegalArgumentException("엔트리 파싱 실패: " + str + ", 오류: " + e.getMessage());
+        }
     }
 
     // 랭킹 표시용 문자열 생성

@@ -38,7 +38,8 @@ public class ServerGameController {
         this.room = room;
         this.gameState = new ServerGameState(room);
         this.wordManager = new ServerWordManager(room.getGameMode());
-        this.leaderboardManager = new LeaderboardManager();
+        this.leaderboardManager = LeaderboardManager.getInstance();
+
         logger.info("게임 컨트롤러 생성: " + room.getRoomId());
     }
 
@@ -111,9 +112,20 @@ public class ServerGameController {
     }
 
     public void handleGameAction(String roomId, ClientHandler client, String action, String[] params) {
-        if (gameState.getStatus() != GameStatus.IN_PROGRESS) return;
-
         try {
+            // 리더보드 액션은 게임 상태와 무관하게 처리
+            if ("LEADERBOARD".equals(action)) {
+                if (params.length >= 3) {
+                    handleLeaderboardAction(client, params[0], params[1], params[2]);
+                    return;
+                }
+            }
+
+            // 나머지 게임 액션들은 게임 진행 중일 때만 처리
+            if (gameState.getStatus() != GameStatus.IN_PROGRESS) {
+                return;
+            }
+
             switch (action) {
                 case "WORD_INPUT" -> {
                     if (params.length >= 1) {
@@ -128,11 +140,6 @@ public class ServerGameController {
                 case "PLAYER_LEAVE_GAME" -> {
                     if (params.length >= 1) {
                         handlePlayerLeaveGame(client);
-                    }
-                }
-                case "LEADERBOARD" -> {
-                    if (params.length >= 3) {
-                        handleLeaderboardAction(client, params[0], params[1], params[2]);
                     }
                 }
                 default -> {
@@ -150,34 +157,43 @@ public class ServerGameController {
         if (gameState.getStatus() != GameStatus.IN_PROGRESS) return;
 
         try {
-            Word matchedWord = null;
-            boolean matched = false;
+            Word matchedWord = gameState.matchWord(typedWord, player.getUsername());
+            if (matchedWord != null) {
+                int newScore = gameState.getPlayerScore(player.getUsername());
+                String opponent = gameState.getOpponentOf(player.getUsername());
+                double opponentPH = opponent != null ? gameState.getPlayerPH(opponent) : 0.0;
+                double playerPH = gameState.getPlayerPH(player.getUsername());
 
-            synchronized (this) {
-                // 여기서 matchWord만 호출하고, 이 메서드 내부에서 단어 제거와 점수/pH 처리를 모두 하도록 함
-                matched = gameState.matchWord(typedWord, player.getUsername());
-                if (matched) {
-                    int newScore = gameState.getPlayerScore(player.getUsername());
-                    String opponent = gameState.getOpponentOf(player.getUsername());
-                    double opponentPH = gameState.getPlayerPH(opponent);
-                    double playerPH = gameState.getPlayerPH(player.getUsername());
+                // WORD_MATCHED 메시지 전송 (점수 정보 포함)
+                server.broadcastToRoom(room.getRoomId(),
+                        String.format("WORD_MATCHED|%s|%s|%s|%d",
+                                room.getRoomId(), matchedWord.getText(), player.getUsername(), newScore));
 
-                    // 매칭 성공 메시지
-                    server.broadcastToRoom(room.getRoomId(),
-                            String.format("WORD_MATCHED|%s|%s|%s|%d|%.1f",
-                                    room.getRoomId(), typedWord, player.getUsername(),
-                                    newScore, playerPH));
+                // pH 업데이트 메시지
+                server.broadcastToRoom(room.getRoomId(),
+                        String.format("PH_UPDATE|%s|%s|%.2f",
+                                room.getRoomId(), player.getUsername(), playerPH));
 
-                    // pH 업데이트 메시지
+                if (opponent != null) {
                     server.broadcastToRoom(room.getRoomId(),
                             String.format("PH_UPDATE|%s|%s|%.2f",
-                                    room.getRoomId(), player.getUsername(),
-                                    playerPH));
+                                    room.getRoomId(), opponent, opponentPH));
+                }
 
-                    if (opponent != null) {
-                        server.broadcastToRoom(room.getRoomId(),
-                                String.format("PH_UPDATE|%s|%s|%.2f",
-                                        room.getRoomId(), opponent, opponentPH));
+                // 특수효과 처리
+                if (matchedWord.hasSpecialEffect()) {
+                    switch (matchedWord.getEffect()) {
+                        case BLIND_OPPONENT:
+                            if (opponent != null) {
+                                // BLIND_EFFECT 메시지 전송 (예: 5초=5000ms)
+                                server.broadcastToRoom(room.getRoomId(),
+                                        String.format("BLIND_EFFECT|%s|%s|%d",
+                                                room.getRoomId(), opponent, 5000));
+                            }
+                            break;
+                        case SCORE_BOOST:
+                            // SCORE_BOOST는 점수 계산 시 이미 반영됨
+                            break;
                     }
                 }
             }
@@ -285,50 +301,43 @@ public class ServerGameController {
      *    GAME_ACTION|LEADERBOARD|GET_MY_RECORDS|JAVA|EASY
      */
     public void handleLeaderboardAction(ClientHandler client, String leaderboardAction, String modeStr, String diffStr) {
-        GameMode mode;
-        DifficultyLevel difficulty;
         try {
-            mode = GameMode.valueOf(modeStr.toUpperCase());
-            difficulty = DifficultyLevel.valueOf(diffStr.toUpperCase());
+            GameMode mode = GameMode.valueOf(modeStr.toUpperCase());
+            DifficultyLevel difficulty = DifficultyLevel.valueOf(diffStr.toUpperCase());
+
+            switch (leaderboardAction) {
+                case "GET_TOP" -> {
+                    List<LeaderboardEntry> topEntries = leaderboardManager.getTopEntries(mode, difficulty, 10);
+                    sendLeaderboardEntries(client, topEntries, "TOP_SCORES");
+                    logger.info("상위 기록 전송: " + mode + ", " + difficulty);
+                }
+                case "GET_MY_RECORDS" -> {
+                    List<LeaderboardEntry> userEntries = leaderboardManager.getUserEntries(client.getUsername());
+                    sendLeaderboardEntries(client, userEntries, "USER_RECORDS");
+                    logger.info("사용자 기록 전송: " + client.getUsername());
+                }
+                default -> {
+                    logger.warning("알 수 없는 리더보드 액션: " + leaderboardAction);
+                    client.sendMessage("ERROR|알 수 없는 리더보드 액션입니다.");
+                }
+            }
         } catch (IllegalArgumentException e) {
+            logger.warning("잘못된 모드 또는 난이도: " + e.getMessage());
             client.sendMessage("ERROR|잘못된 모드 또는 난이도입니다.");
-            return;
-        }
-
-        switch (leaderboardAction) {
-            case "GET_TOP":
-                List<LeaderboardEntry> topEntries = leaderboardManager.getTopEntries(mode, difficulty, 10);
-                sendLeaderboardEntries(client, topEntries, "TOP_SCORES");
-                break;
-
-            case "GET_MY_RECORDS":
-                List<LeaderboardEntry> userEntries = leaderboardManager.getUserEntries(client.getUsername());
-                // 필요에 따라 특정 모드/난이도 필터링 가능
-                // userEntries = userEntries.stream()
-                //     .filter(e -> e.getGameMode() == mode && e.getDifficulty() == difficulty)
-                //     .collect(Collectors.toList());
-                sendLeaderboardEntries(client, userEntries, "USER_RECORDS");
-                break;
-
-            default:
-                client.sendMessage("ERROR|알 수 없는 리더보드 액션입니다.");
+        } catch (Exception e) {
+            logger.severe("리더보드 처리 중 오류: " + e.getMessage());
+            client.sendMessage("ERROR|리더보드 처리 중 오류가 발생했습니다.");
         }
     }
 
-    private void sendLeaderboardEntries(ClientHandler client,
-                                        List<LeaderboardEntry> entries,
-                                        String responseType) {
+    private void sendLeaderboardEntries(ClientHandler client, List<LeaderboardEntry> entries, String responseType) {
         StringBuilder response = new StringBuilder(responseType);
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
         for (LeaderboardEntry entry : entries) {
-            response.append("|").append(String.format("%s,%d,%s,%s,%s",
-                    entry.getUsername(),
-                    entry.getScore(),
-                    entry.getGameMode().name(),
-                    entry.getDifficulty().name(),
-                    entry.getTimestamp().format(formatter)));
+            // 날짜 포맷을 LeaderboardEntry의 포맷과 일치시킴
+            response.append("|").append(entry.toFileString());
         }
         client.sendMessage(response.toString());
+        logger.info("리더보드 데이터 전송: " + responseType + ", 엔트리 수: " + entries.size());
     }
 
     public void stopGame() {

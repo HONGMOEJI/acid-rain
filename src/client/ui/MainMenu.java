@@ -40,6 +40,9 @@ public class MainMenu extends JPanel implements GameEventListener {
         initializeUI();
         setupKeyboardShortcuts();
         waveAnimationTimer.start();
+
+        // 메인 메뉴가 생성될 때, 서버에 접속자 수 요청
+        requestUserCountUpdate();
     }
 
     private void initializeUI() {
@@ -49,6 +52,10 @@ public class MainMenu extends JPanel implements GameEventListener {
         createTopMenuBar();
         createMainContent();
         createStatusBar();
+    }
+
+    private void requestUserCountUpdate() {
+        client.sendMessage(GameEvent.CMD_USERS_REQUEST);
     }
 
     private void createTopMenuBar() {

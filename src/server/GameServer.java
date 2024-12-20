@@ -11,6 +11,8 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Logger;
 
+import game.model.LeaderboardEntry;
+import server.game.LeaderboardManager;
 import server.game.ServerGameController;
 
 public class GameServer {
@@ -268,36 +270,18 @@ public class GameServer {
 
     /*
      * GAME_ACTION 메시지를 처리하는 메서드.
-     * 기존에는 리더보드 요청을 별도의 LEADERBOARD_REQUEST 메시지로 받았으나,
-     * 이제는 GAME_ACTION 아래에 LEADERBOARD 액션으로 통합되었으므로
-     * 여기서 처리한다.
      */
     public void handleGameAction(String roomId, ClientHandler player, String action, String... params) {
-        // LEADERBOARD 처리 부분 (기존 코드 유지)
-        if ("LEADERBOARD".equals(action)) {
-            if (params.length >= 3) {
-                String leaderboardAction = params[0];
-                String modeStr = params[1];
-                String diffStr = params[2];
-                ServerGameController controller = controllers.get(roomId);
-                if (controller != null) {
-                    controller.handleLeaderboardAction(player, leaderboardAction, modeStr, diffStr);
-                }
-            } else {
-                player.sendMessage("ERROR|리더보드 요청 형식이 잘못되었습니다.");
-            }
-            return;
-        }
-
-        // 게임 액션 처리
         GameRoom room = rooms.get(roomId);
         if (room == null || !room.isInGame()) {
+            logger.warning("유효하지 않은 게임 액션 시도 - 룸: " + roomId + ", 액션: " + action);
             player.sendMessage("ERROR|유효하지 않은 게임 액션입니다.");
             return;
         }
 
         ServerGameController controller = controllers.get(roomId);
         if (controller == null) {
+            logger.warning("게임 컨트롤러를 찾을 수 없음 - 룸: " + roomId);
             player.sendMessage("ERROR|게임 컨트롤러를 찾을 수 없습니다.");
             return;
         }
@@ -308,6 +292,7 @@ public class GameServer {
                     if (params.length > 0) {
                         controller.handlePlayerInput(player, params[0]);
                     } else {
+                        logger.warning("단어 입력 없음 - 플레이어: " + player.getUsername());
                         player.sendMessage("ERROR|단어가 입력되지 않았습니다.");
                     }
                 }
@@ -315,21 +300,71 @@ public class GameServer {
                     if (params.length > 0) {
                         controller.handleWordMissed(params[0], player);
                     } else {
+                        logger.warning("놓친 단어 정보 없음 - 플레이어: " + player.getUsername());
                         player.sendMessage("ERROR|놓친 단어 정보가 없습니다.");
                     }
                 }
                 case "PLAYER_LEAVE_GAME" -> {
-                    // 플레이어 퇴장 처리 추가
+                    logger.info("플레이어 게임 퇴장 - 플레이어: " + player.getUsername() + ", 룸: " + roomId);
                     controller.handlePlayerLeaveGame(player);
                 }
                 default -> {
-                    logger.warning("알 수 없는 게임 액션: " + action);
+                    logger.warning("알 수 없는 게임 액션: " + action + " - 플레이어: " + player.getUsername());
                     player.sendMessage("ERROR|알 수 없는 게임 액션입니다.");
                 }
             }
         } catch (Exception e) {
             logger.severe("게임 액션 처리 중 오류 발생: " + e.getMessage());
+            e.printStackTrace();
             player.sendMessage("ERROR|게임 액션 처리 중 오류가 발생했습니다.");
+        }
+    }
+
+    public void handleLeaderboardAction(ClientHandler player, String... params) {
+        if (params.length >= 3) {
+            String leaderboardAction = params[0];
+            String modeStr = params[1];
+            String diffStr = params[2];
+            LeaderboardManager leaderboardManager = LeaderboardManager.getInstance();
+
+            try {
+                GameMode mode = GameMode.valueOf(modeStr.toUpperCase());
+                DifficultyLevel difficulty = DifficultyLevel.valueOf(diffStr.toUpperCase());
+
+                switch (leaderboardAction) {
+                    case "GET_TOP" -> {
+                        List<LeaderboardEntry> topEntries = leaderboardManager.getTopEntries(mode, difficulty);
+                        StringBuilder response = new StringBuilder("LEADERBOARD_DATA|TOP");
+                        for (LeaderboardEntry entry : topEntries) {
+                            response.append("|").append(entry.toFileString());
+                        }
+                        player.sendMessage(response.toString());
+                        logger.info("상위 기록 전송 - 모드: " + mode + ", 난이도: " + difficulty);
+                    }
+                    case "GET_MY_RECORDS" -> {
+                        List<LeaderboardEntry> userEntries = leaderboardManager.getUserEntries(player.getUsername());
+                        StringBuilder response = new StringBuilder("LEADERBOARD_DATA|USER");
+                        for (LeaderboardEntry entry : userEntries) {
+                            response.append("|").append(entry.toFileString());
+                        }
+                        player.sendMessage(response.toString());
+                        logger.info("사용자 기록 전송 - 사용자: " + player.getUsername());
+                    }
+                    default -> {
+                        logger.warning("알 수 없는 리더보드 액션: " + leaderboardAction);
+                        player.sendMessage("ERROR|알 수 없는 리더보드 액션입니다.");
+                    }
+                }
+            } catch (IllegalArgumentException e) {
+                logger.warning("잘못된 게임 모드 또는 난이도: " + e.getMessage());
+                player.sendMessage("ERROR|잘못된 게임 모드 또는 난이도입니다.");
+            } catch (Exception e) {
+                logger.severe("리더보드 처리 중 오류: " + e.getMessage());
+                player.sendMessage("ERROR|리더보드 처리 중 오류가 발생했습니다.");
+            }
+        } else {
+            logger.warning("잘못된 리더보드 요청 형식");
+            player.sendMessage("ERROR|리더보드 요청 형식이 잘못되었습니다.");
         }
     }
 

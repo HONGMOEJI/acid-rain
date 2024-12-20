@@ -31,41 +31,41 @@ public class MessageHandler {
 
             switch (messageType) {
                 // 유저 관련 메시지
-                case "USERS" -> handleUsers(parts);
+                case GameEvent.MESSAGE_USERS -> handleUsers(parts);
 
                 // 방 관련 메시지
-                case "ROOM_LIST_RESPONSE" -> handleRoomList(parts);
-                case "PLAYER_LIST_RESPONSE" -> handlePlayerList(parts);
-                case "CREATE_ROOM_RESPONSE" -> handleCreateRoom(parts);
-                case "JOIN_ROOM_RESPONSE" -> handleJoinRoom(parts);
-                case "ROOM_CLOSED" -> handleRoomClosed(parts);
-                case "HOST_LEFT" -> handleHostLeft(parts);
-                case "NEW_HOST" -> handleNewHost(parts);
+                case GameEvent.MESSAGE_ROOM_LIST_RESPONSE -> handleRoomList(parts);
+                case GameEvent.MESSAGE_PLAYER_LIST_RESPONSE -> handlePlayerList(parts);
+                case GameEvent.MESSAGE_CREATE_ROOM_RESPONSE -> handleCreateRoom(parts);
+                case GameEvent.MESSAGE_JOIN_ROOM_RESPONSE -> handleJoinRoom(parts);
+                case GameEvent.MESSAGE_ROOM_CLOSED -> handleRoomClosed(parts);
+                case GameEvent.MESSAGE_HOST_LEFT -> handleHostLeft(parts);
+                case GameEvent.MESSAGE_NEW_HOST -> handleNewHost(parts);
 
                 // 채팅 메시지
-                case "CHAT" -> handleChat(parts);
+                case GameEvent.MESSAGE_CHAT -> handleChat(parts);
 
                 // 게임 상태 메시지
-                case "PLAYER_UPDATE" -> handlePlayerUpdate(parts);
-                case "SETTINGS_UPDATE" -> handleSettingsUpdate(parts);
-                case "GAME_START" -> handleGameStart();
+                case GameEvent.MESSAGE_PLAYER_UPDATE -> handlePlayerUpdate(parts);
+                case GameEvent.MESSAGE_SETTINGS_UPDATE -> handleSettingsUpdate(parts);
+                case GameEvent.MESSAGE_GAME_START -> handleGameStart();
 
                 // 게임 플레이 메시지
-                case "WORD_SPAWNED" -> handleWordSpawned(parts);
-                case "WORD_MATCHED" -> handleWordMatched(parts);
-                case "WORD_MISSED" -> handleWordMissed(parts);
-                case "BLIND_EFFECT" -> handleBlindEffect(parts);
-                case "GAME_OVER" -> handleGameOver(parts);
+                case GameEvent.MESSAGE_WORD_SPAWNED -> handleWordSpawned(parts);
+                case GameEvent.MESSAGE_WORD_MATCHED -> handleWordMatched(parts);
+                case GameEvent.MESSAGE_WORD_MISSED -> handleWordMissed(parts);
+                case GameEvent.MESSAGE_BLIND_EFFECT -> handleBlindEffect(parts);
+                case GameEvent.MESSAGE_GAME_OVER -> handleGameOver(parts);
 
-                case "PH_UPDATE" -> handlePHUpdate(parts);
+                case GameEvent.MESSAGE_PH_UPDATE -> handlePHUpdate(parts);
 
                 // 리더보드 관련 메시지
-                case "LEADERBOARD_DATA" -> handleLeaderboardData(parts);
-                case "LEADERBOARD_UPDATE" -> handleLeaderboardUpdate(parts);
-                case "MY_RECORDS_DATA" -> handleMyRecordsData(parts);
+                case GameEvent.MESSAGE_LEADERBOARD_DATA -> handleLeaderboardData(parts);
+                case GameEvent.MESSAGE_LEADERBOARD_UPDATE -> handleLeaderboardUpdate(parts);
+                case GameEvent.MESSAGE_MY_RECORDS_DATA -> handleMyRecordsData(parts);
 
                 // 에러 메시지
-                case "ERROR" -> handleError(parts);
+                case GameEvent.MESSAGE_ERROR -> handleError(parts);
 
                 default -> logger.warning("알 수 없는 메시지 타입: " + messageType);
             }
@@ -259,7 +259,28 @@ public class MessageHandler {
         if (parts.length >= 3) {
             String type = parts[1];
             String[] entries = Arrays.copyOfRange(parts, 2, parts.length);
-            gameClient.handleEvent("TOP_SCORES", (Object) entries);
+            switch (type) {
+                case "TOP":
+                    gameClient.handleEvent("TOP_SCORES", (Object[]) entries);
+                    break;
+                case "USER":
+                    gameClient.handleEvent("USER_RECORDS", (Object[]) entries);
+                    break;
+                default:
+                    logger.warning("알 수 없는 리더보드 타입: " + type);
+            }
+        } else {
+            String type = parts.length >= 2 ? parts[1] : "UNKNOWN";
+            switch (type) {
+                case "TOP":
+                    gameClient.handleEvent("TOP_SCORES", new String[0]);
+                    break;
+                case "USER":
+                    gameClient.handleEvent("USER_RECORDS", new String[0]);
+                    break;
+                default:
+                    logger.warning("알 수 없는 리더보드 타입: " + type);
+            }
         }
     }
 

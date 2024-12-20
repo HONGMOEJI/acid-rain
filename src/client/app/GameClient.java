@@ -162,12 +162,11 @@ public class GameClient implements AutoCloseable {
     }
 
     public void requestTopScores(GameMode mode, DifficultyLevel difficulty) {
-        sendMessage(String.format("LEADERBOARD_REQUEST|TOP_SCORES|%s|%s",
-                mode.name(), difficulty.name()));
+        sendMessage("LEADERBOARD_ACTION|GET_TOP|" + mode.name() + "|" + difficulty.name());
     }
 
-    public void requestUserRecords(String username) {
-        sendMessage(String.format("LEADERBOARD_REQUEST|USER_RECORDS|%s", username));
+    public void requestUserRecords(GameMode mode, DifficultyLevel difficulty) {
+        sendMessage("LEADERBOARD_ACTION|GET_MY_RECORDS|" + mode.name() + "|" + difficulty.name());
     }
 
     // 이벤트 처리 메서드
