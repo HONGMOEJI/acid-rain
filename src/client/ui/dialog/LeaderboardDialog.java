@@ -15,11 +15,9 @@ import game.model.DifficultyLevel;
 import game.model.LeaderboardEntry;
 
 import javax.swing.*;
-import javax.swing.border.*;
 import javax.swing.table.*;
 import javax.swing.plaf.basic.BasicScrollBarUI;
 import java.awt.*;
-import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -198,7 +196,6 @@ public class LeaderboardDialog extends BaseDialog implements GameEventListener {
         DifficultyLevel difficulty = ((DifficultyWrapper) difficultyFilter.getSelectedItem()).getDifficulty();
 
         // 서버에 데이터 요청
-        // 기존 코드
         client.sendMessage("LEADERBOARD_ACTION|GET_TOP|" + mode.name() + "|" + difficulty.name());
         client.sendMessage("LEADERBOARD_ACTION|GET_MY_RECORDS|" + mode.name() + "|" + difficulty.name());
 

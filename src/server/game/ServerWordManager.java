@@ -112,13 +112,4 @@ public class ServerWordManager {
 
         return word;
     }
-
-    public boolean isWordValid(String word) {
-        return wordsByMode.getOrDefault(mode, Collections.emptyList())
-                .contains(word);
-    }
-
-    public int getWordCount() {
-        return wordsByMode.getOrDefault(mode, Collections.emptyList()).size();
-    }
 }

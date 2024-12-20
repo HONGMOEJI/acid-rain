@@ -1,5 +1,7 @@
 package server;
 
+import client.event.GameEvent.*;
+
 import java.io.*;
 import java.net.Socket;
 import java.net.SocketException;
@@ -47,47 +49,48 @@ public class ClientHandler implements Runnable {
             cleanup();
         }
     }
-
+ 
+    // 클라이언트의 메시지를 처리하는 메서드 ** 중요 **
     private void processMessage(String message) {
         String[] parts = message.split("\\|");
         String messageType = parts[0];
 
         try {
             switch (messageType) {
-                case "LOGIN":
+                case ClientCommand.LOGIN:
                     handleLogin(parts);
                     break;
-                case "CREATE_ROOM":
+                case ClientCommand.CREATE_ROOM:
                     server.createRoom(parts, this);
                     break;
-                case "JOIN_ROOM":
+                case ClientCommand.JOIN_ROOM:
                     handleJoinRoom(parts);
                     break;
-                case "LEAVE_ROOM":
+                case ClientCommand.LEAVE_ROOM:
                     handleLeaveRoom(parts);
                     break;
-                case "CHAT":
+                case ClientCommand.CHAT:
                     handleChat(parts);
                     break;
-                case "UPDATE_SETTINGS":
+                case ClientEvent.SETTINGS_UPDATED:
                     handleSettingsUpdate(parts);
                     break;
-                case "START_GAME":
+                case ClientCommand.START_GAME:
                     handleGameStart(parts);
                     break;
-                case "GAME_ACTION":
+                case ClientCommand.GAME_ACTION:
                     handleGameAction(parts);
                     break;
                 case "PING":
                     sendMessage("PONG");
                     break;
-                case "ROOM_LIST":
+                case ClientCommand.ROOM_LIST:
                     server.broadcastRoomList();
                     break;
-                case "PLAYER_LIST":
+                case ClientCommand.PLAYER_LIST:
                     handlePlayerList(parts);
                     break;
-                case "LOGOUT":
+                case ClientCommand.LOGOUT:
                     handleLogout();
                     break;
 
@@ -96,17 +99,17 @@ public class ClientHandler implements Runnable {
                     break;
 
                 // must be removed after refactoring
-                case "USERS_REQUEST":
+                case ClientCommand.USERS_REQUEST:
                     server.broadcastUserCount();
                     break;
 
                 default:
                     logger.warning("알 수 없는 메시지 타입: " + messageType);
-                    sendMessage("ERROR|지원하지 않는 메시지 타입입니다.");
+                    sendMessage(ServerMessage.ERROR + "|지원하지 않는 메시지 타입입니다.");
             }
         } catch (Exception e) {
             logger.severe("메시지 처리 중 오류 발생: " + e.getMessage());
-            sendMessage("ERROR|메시지 처리 중 오류가 발생했습니다: " + e.getMessage());
+            sendMessage(ServerMessage.ERROR + "|메시지 처리 중 오류가 발생했습니다: " + e.getMessage());
         }
     }
 
@@ -117,7 +120,7 @@ public class ClientHandler implements Runnable {
             server.broadcastUserCount();
             server.broadcastRoomList();
         } else {
-            sendMessage("ERROR|잘못된 로그인 요청입니다.");
+            sendMessage(ServerMessage.ERROR + "|잘못된 로그인 요청입니다.");
         }
     }
 
@@ -127,7 +130,7 @@ public class ClientHandler implements Runnable {
             String password = parts.length >= 3 ? parts[2] : "";
             server.joinRoom(roomId, this, password);
         } else {
-            sendMessage("ERROR|잘못된 방 입장 요청입니다.");
+            sendMessage(ServerMessage.ERROR + "|잘못된 방 입장 요청입니다.");
         }
     }
 
@@ -142,7 +145,7 @@ public class ClientHandler implements Runnable {
         if (parts.length >= 3 && currentRoomId != null) {
             server.handleChat(currentRoomId, this, parts[2]);
         } else {
-            sendMessage("ERROR|잘못된 채팅 메시지입니다.");
+            sendMessage(ServerMessage.ERROR + "|잘못된 채팅 메시지입니다.");
         }
     }
 
@@ -150,7 +153,7 @@ public class ClientHandler implements Runnable {
         if (parts.length >= 4 && currentRoomId != null) {
             server.updateGameSettings(currentRoomId, parts[2], parts[3], this);
         } else {
-            sendMessage("ERROR|잘못된 설정 업데이트 요청입니다.");
+            sendMessage(ServerMessage.ERROR + "|잘못된 설정 업데이트 요청입니다.");
         }
     }
 
@@ -158,7 +161,7 @@ public class ClientHandler implements Runnable {
         if (currentRoomId != null) {
             server.startGame(currentRoomId, this);
         } else {
-            sendMessage("ERROR|게임을 시작할 수 있는 방이 없습니다.");
+            sendMessage(ServerMessage.ERROR + "|게임을 시작할 수 있는 방이 없습니다.");
         }
     }
 
@@ -168,7 +171,7 @@ public class ClientHandler implements Runnable {
             System.arraycopy(parts, 1, params, 0, parts.length - 1);
             server.handleLeaderboardAction(this, params);
         } else {
-            sendMessage("ERROR|잘못된 리더보드 액션 요청입니다.");
+            sendMessage(ServerMessage.ERROR + "|잘못된 리더보드 액션 요청입니다.");
         }
     }
 
@@ -180,7 +183,7 @@ public class ClientHandler implements Runnable {
             System.arraycopy(parts, 3, params, 0, parts.length - 3);
             server.handleGameAction(roomId, this, action, params);
         } else {
-            sendMessage("ERROR|잘못된 게임 액션 요청입니다.");
+            sendMessage(ServerMessage.ERROR + "|잘못된 게임 액션 요청입니다.");
         }
     }
 
@@ -189,7 +192,7 @@ public class ClientHandler implements Runnable {
             String roomId = parts[1];
             server.sendPlayerList(roomId, this);
         } else {
-            sendMessage("ERROR|잘못된 플레이어 목록 요청입니다.");
+            sendMessage(ServerMessage.ERROR + "|잘못된 플레이어 목록 요청입니다.");
         }
     }
 

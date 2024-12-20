@@ -7,6 +7,7 @@ package client.ui.game;
 
 import client.app.GameClient;
 import client.event.GameEvent;
+import client.event.GameEvent.ClientEvent;
 import client.event.GameEventListener;
 import client.ui.MainMenu;
 import client.ui.theme.ColorScheme;
@@ -172,11 +173,12 @@ public class GameLobby extends JFrame implements GameEventListener {
         return panel;
     }
 
+    // 게임 설정 업데이트 요청
     private void setupHostEventListeners() {
         gameModeCombo.addActionListener(e -> {
             if (!isClosing && e.getSource() == gameModeCombo) {
                 GameMode selectedMode = (GameMode) gameModeCombo.getSelectedItem();
-                client.sendUpdateSettingsRequest(room.getRoomId(), "MODE",
+                client.sendMessage(GameEvent.ServerMessage.SETTINGS_UPDATE + "|" + room.getRoomId() + "|MODE|" +
                         selectedMode.getDisplayName());
             }
         });
@@ -184,7 +186,7 @@ public class GameLobby extends JFrame implements GameEventListener {
         difficultyCombo.addActionListener(e -> {
             if (!isClosing && e.getSource() == difficultyCombo) {
                 DifficultyLevel selectedDifficulty = (DifficultyLevel) difficultyCombo.getSelectedItem();
-                client.sendUpdateSettingsRequest(room.getRoomId(), "DIFFICULTY",
+                client.sendMessage(GameEvent.ServerMessage.SETTINGS_UPDATE + "|" + room.getRoomId() + "|DIFFICULTY|" +
                         selectedDifficulty.getDisplayName());
             }
         });
@@ -510,30 +512,14 @@ public class GameLobby extends JFrame implements GameEventListener {
 
         try {
             switch (eventType) {
-                case GameEvent.PLAYER_UPDATED:
-                    handlePlayerUpdate(data);
-                    break;
-                case GameEvent.CHAT_RECEIVED:
-                    handleChatReceived(data);
-                    break;
-                case GameEvent.SETTINGS_UPDATED:
-                    handleSettingsUpdate(data);
-                    break;
-                case GameEvent.GAME_STARTED:
-                    handleGameStart();
-                    break;
-                case GameEvent.HOST_LEFT:
-                    handleHostLeft(data);
-                    break;
-                case GameEvent.NEW_HOST:
-                    handleNewHost(data);
-                    break;
-                case GameEvent.ROOM_CLOSED:
-                    handleRoomClosed(data);
-                    break;
-                case GameEvent.ERROR_OCCURRED:
-                    handleError(data);
-                    break;
+                case ClientEvent.PLAYER_UPDATED -> handlePlayerUpdate(data);
+                case ClientEvent.CHAT_RECEIVED -> handleChatReceived(data);
+                case ClientEvent.SETTINGS_UPDATED -> handleSettingsUpdate(data);
+                case ClientEvent.GAME_STARTED -> handleGameStart();
+                case ClientEvent.HOST_LEFT -> handleHostLeft(data);
+                case ClientEvent.NEW_HOST -> handleNewHost(data);
+                case ClientEvent.ROOM_CLOSED -> handleRoomClosed(data);
+                case ClientEvent.ERROR_OCCURRED -> handleError(data);
             }
         } catch (Exception e) {
             logger.severe("이벤트 처리 중 오류 발생: " + e.getMessage());

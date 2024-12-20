@@ -7,6 +7,8 @@ package client.ui;
 
 import client.app.GameClient;
 import client.event.GameEvent;
+import client.event.GameEvent.ClientCommand;
+import client.event.GameEvent.ServerMessage;
 import client.event.GameEventListener;
 import client.ui.dialog.LeaderboardDialog;
 import client.ui.dialog.RoomListDialog;
@@ -55,7 +57,7 @@ public class MainMenu extends JPanel implements GameEventListener {
     }
 
     private void requestUserCountUpdate() {
-        client.sendMessage(GameEvent.CMD_USERS_REQUEST);
+        client.sendMessage(ClientCommand.USERS_REQUEST);
     }
 
     private void createTopMenuBar() {
@@ -63,8 +65,7 @@ public class MainMenu extends JPanel implements GameEventListener {
         topMenuBar.setBackground(ColorScheme.SECONDARY);
 
         JPanel leftMenu = createMenuSection(FlowLayout.LEFT,
-                createMenuLabel("배경색 설정", this::showBackgroundColorDialog),
-                createMenuLabel("마이페이지", this::showMyPage)
+                createMenuLabel("배경색 설정", this::showBackgroundColorDialog)
         );
 
         JPanel centerMenu = createMenuSection(FlowLayout.CENTER,
@@ -169,10 +170,6 @@ public class MainMenu extends JPanel implements GameEventListener {
         }
     }
 
-    private void showMyPage() {
-        JOptionPane.showMessageDialog(this, "마이페이지 기능은 준비 중입니다.");
-    }
-
     private void showRanking() {
         JFrame currentFrame = (JFrame) SwingUtilities.getWindowAncestor(this);
         LeaderboardDialog leaderboardDialog = new LeaderboardDialog(currentFrame, client);
@@ -194,7 +191,7 @@ public class MainMenu extends JPanel implements GameEventListener {
 
     @Override
     public void onGameEvent(String eventType, Object... data) {
-        if (eventType.equals(GameEvent.USERS_UPDATED) && data.length > 0) {
+        if (eventType.equals(GameEvent.ClientEvent.USERS_UPDATED) && data.length > 0) {
             int newConnectedUsers = (int) data[0];
             SwingUtilities.invokeLater(() -> {
                 connectedUsers = newConnectedUsers;

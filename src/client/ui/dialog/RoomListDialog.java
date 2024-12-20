@@ -7,6 +7,7 @@ package client.ui.dialog;
 
 import client.app.GameClient;
 import client.event.GameEvent;
+import client.event.GameEvent.ClientEvent;
 import client.event.GameEventListener;
 import client.ui.MainMenu;
 import client.ui.components.RetroButton;
@@ -328,18 +329,10 @@ public class RoomListDialog extends BaseDialog implements GameEventListener {
     public void onGameEvent(String eventType, Object... data) {
         SwingUtilities.invokeLater(() -> {
             switch (eventType) {
-                case GameEvent.ROOM_LIST_UPDATED:
-                    handleRoomListUpdate(data);
-                    break;
-                case GameEvent.ROOM_JOINED:
-                    handleRoomJoined(data);
-                    break;
-                case GameEvent.ROOM_CREATED:
-                    handleRoomCreated(data);
-                    break;
-                case GameEvent.ERROR_OCCURRED:
-                    handleError((String) data[0]);
-                    break;
+                case ClientEvent.ROOM_LIST_UPDATED -> handleRoomListUpdate(data);
+                case ClientEvent.ROOM_JOINED -> handleRoomJoined(data);
+                case ClientEvent.ROOM_CREATED -> handleRoomCreated(data);
+                case ClientEvent.ERROR_OCCURRED -> handleError((String) data[0]);
             }
         });
     }

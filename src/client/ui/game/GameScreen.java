@@ -6,6 +6,7 @@
 package client.ui.game;
 
 import client.app.GameClient;
+import client.event.GameEvent.*;
 import client.event.GameEventListener;
 import client.ui.MainMenu;
 import client.ui.theme.ColorScheme;
@@ -168,7 +169,7 @@ public class GameScreen extends JFrame implements GameEventListener {
         inputField.addActionListener(e -> {
             String input = inputField.getText().trim();
             if (!input.isEmpty()) {
-                client.sendGameAction(roomId, "WORD_INPUT", input);
+                client.sendGameAction(roomId, ClientCommand.WORD_INPUT, input);
                 inputField.setText("");
             }
         });
@@ -227,7 +228,7 @@ public class GameScreen extends JFrame implements GameEventListener {
                     word.setY(word.getY() + 2);
                     if (word.getY() > gamePanel.getHeight()) {
                         activeWords.remove(word);
-                        client.sendGameAction(roomId, "WORD_MISSED", word.getText());
+                        client.sendGameAction(roomId, ClientEvent.WORD_MISSED, word.getText());
                     }
                 }
             }
@@ -272,7 +273,7 @@ public class GameScreen extends JFrame implements GameEventListener {
             client.sendGameAction(roomId, "PLAYER_LEAVE_GAME", myName);
 
             // 방 나가기 처리
-            client.sendMessage("LEAVE_ROOM|" + roomId);
+            client.sendMessage(ClientCommand.LEAVE_ROOM + "|" + roomId);
             client.setEventListener(null);
 
             if (mainFrame != null) {
@@ -441,7 +442,7 @@ public class GameScreen extends JFrame implements GameEventListener {
         SwingUtilities.invokeLater(() -> {
             try {
                 // 방 나가기 처리
-                client.sendMessage("LEAVE_ROOM|" + roomId);
+                client.sendMessage(ClientCommand.LEAVE_ROOM + "|" + roomId);
 
                 // 새로운 MainMenu 인스턴스를 생성해서 현재 프레임에 표시
                 MainMenu mainMenu = new MainMenu(client);

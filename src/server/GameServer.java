@@ -221,7 +221,7 @@ public class GameServer {
                 }
             }
 
-            broadcastToRoom(roomId, "SETTINGS_UPDATE|" + roomId + "|" +
+            broadcastToRoom(roomId, "SETTINGS_UPDATED|" + roomId + "|" +
                     room.getGameMode().name() + "|" +
                     room.getDifficulty().name());
             broadcastRoomList();

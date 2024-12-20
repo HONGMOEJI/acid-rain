@@ -9,7 +9,6 @@ package server.game;
 import game.model.GameMode;
 import game.model.DifficultyLevel;
 import game.model.LeaderboardEntry;
-import client.event.GameEvent;
 
 import java.io.*;
 import java.nio.file.*;

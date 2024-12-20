@@ -5,10 +5,10 @@
 
 package client.app;
 
+import client.event.GameEvent.*;
 import client.event.GameEventListener;
 import client.network.MessageHandler;
-import game.model.DifficultyLevel;
-import game.model.GameMode;
+
 import game.model.GameRoom;
 
 import java.io.*;
@@ -39,7 +39,10 @@ public class GameClient implements AutoCloseable {
         this.isRunning = false;
     }
 
-    // 소켓 연결을 위한 메서드
+    /**
+     * 서버와의 연결을 초기화하고 메시지 수신을 시작
+     * @throws IOException 서버 연결 실패 시 예외 발생
+     */
     public void connect() throws IOException {
         if (isRunning) {
             logger.warning("이미 연결되어 있습니다.");
@@ -52,8 +55,8 @@ public class GameClient implements AutoCloseable {
             writer = new PrintWriter(new OutputStreamWriter(socket.getOutputStream()), true);
 
             isRunning = true;
-            sendMessage("LOGIN|" + username);
-            sendMessage("ROOM_LIST");
+            sendMessage(ClientCommand.LOGIN + "|" + username);
+            sendMessage(ClientCommand.ROOM_LIST);
             startMessageReceiver();
 
             logger.info("서버에 연결되었습니다: " + host + ":" + port);
@@ -63,7 +66,10 @@ public class GameClient implements AutoCloseable {
         }
     }
 
-    // 메시지 수신을 위한 메서드
+    /*
+     * 메시지 수신 작업을 시작
+     * 별도의 스레드에서 서버로부터 지속적으로 메시지를 읽어 처리
+     */
     private void startMessageReceiver() {
         executorService.submit(() -> {
             try {
@@ -80,7 +86,10 @@ public class GameClient implements AutoCloseable {
         });
     }
 
-    // 기본 통신 메서드
+    /**
+     * 서버에 지정된 메시지를 전송
+     * @param message 서버로 보낼 메시지
+     */
     public void sendMessage(String message) {
         if (writer != null && isConnected()) {
             writer.println(message);
@@ -90,13 +99,16 @@ public class GameClient implements AutoCloseable {
         }
     }
 
-    // Game Lobby 관련 메서드
     public void sendPlayerListRequest(String roomId) {
-        sendMessage("PLAYER_LIST|" + roomId);
+        sendMessage(ClientCommand.ROOM_LIST + "|" + roomId);
     }
 
+    /**
+     * 새로운 게임 방을 생성하도록 서버에 요청합니다.
+     * @param room 생성할 게임 방의 정보를 포함한 객체
+     */
     public void sendCreateRoomRequest(GameRoom room) {
-        String message = String.format("CREATE_ROOM|%s|%s|%s|%s|%d",
+        String message = String.format(ClientCommand.CREATE_ROOM + "|%s|%s|%s|%s|%d",
                 room.getRoomName(),
                 room.getPassword(),
                 room.getGameMode().name(),
@@ -107,7 +119,7 @@ public class GameClient implements AutoCloseable {
     }
 
     public void sendJoinRoomRequest(String roomId, String password) {
-        StringBuilder message = new StringBuilder("JOIN_ROOM|" + roomId);
+        StringBuilder message = new StringBuilder(ClientCommand.JOIN_ROOM + "|" + roomId);
         if (password != null && !password.isEmpty()) {
             message.append("|").append(password);
         }
@@ -120,54 +132,56 @@ public class GameClient implements AutoCloseable {
             return;
         }
 
-        sendMessage("LEAVE_ROOM|" + roomId);
+        sendMessage(ClientCommand.LEAVE_ROOM + "|" + roomId);
         currentRoom = null;
 
         if (eventListener != null) {
-            eventListener.onGameEvent("ROOM_CLOSED", roomId, "방이 닫혔습니다.");
-            sendMessage("ROOM_LIST");
+            eventListener.onGameEvent(ClientEvent.ROOM_CLOSED, roomId, "방이 닫혔습니다.");
+            sendMessage(ClientCommand.ROOM_LIST);
         }
     }
 
     public void sendRoomChatMessage(String roomId, String message) {
-        sendMessage("CHAT|" + roomId + "|" + message);
+        sendMessage(ClientCommand.CHAT + "|" + roomId + "|" + message);
     }
 
     public void sendGameStartRequest(String roomId) {
-        sendMessage("START_GAME|" + roomId);
+        sendMessage(ClientCommand.START_GAME + "|" + roomId);
     }
 
     // In-Game 관련 메서드
     public void sendGameAction(String roomId, String action, String... params) {
-        StringBuilder message = new StringBuilder("GAME_ACTION|" + roomId + "|" + action);
+        StringBuilder message = new StringBuilder(ClientCommand.GAME_ACTION + "|" + roomId + "|" + action);
         for (String param : params) {
             message.append("|").append(param);
         }
         sendMessage(message.toString());
     }
-
-    public void sendGameEndRequest(String roomId, String winnerName, int myScore, int opponentScore) {
-        sendMessage(String.format("GAME_END|%s|%s|%d|%d",
-                roomId, winnerName, myScore, opponentScore));
-    }
-
-    public void sendUpdateSettingsRequest(String roomId, String settingType, String value) {
-        sendMessage("UPDATE_SETTINGS|" + roomId + "|" + settingType + "|" + value);
-    }
-
-    // 리더보드(랭킹) 관련 메서드
-    public void requestLeaderboardUpdate(String username, int score, GameMode mode, DifficultyLevel difficulty) {
-        sendMessage(String.format("LEADERBOARD_UPDATE|%s|%d|%s|%s",
-                username, score, mode.name(), difficulty.name()));
-    }
-
-    public void requestTopScores(GameMode mode, DifficultyLevel difficulty) {
-        sendMessage("LEADERBOARD_ACTION|GET_TOP|" + mode.name() + "|" + difficulty.name());
-    }
-
-    public void requestUserRecords(GameMode mode, DifficultyLevel difficulty) {
-        sendMessage("LEADERBOARD_ACTION|GET_MY_RECORDS|" + mode.name() + "|" + difficulty.name());
-    }
+/*
+ * Deprecated xD
+ */
+//    public void sendGameEndRequest(String roomId, String winnerName, int myScore, int opponentScore) {
+//        sendMessage(String.format("GAME_END|%s|%s|%d|%d",
+//                roomId, winnerName, myScore, opponentScore));
+//    }
+//
+//    public void sendUpdateSettingsRequest(String roomId, String settingType, String value) {
+//        sendMessage("UPDATE_SETTINGS|" + roomId + "|" + settingType + "|" + value);
+//    }
+//
+//    // 리더보드(랭킹) 관련 메서드
+//    public void requestLeaderboardUpdate(String username, int score, GameMode mode, DifficultyLevel difficulty) {
+//        sendMessage(String.format("LEADERBOARD_UPDATE|%s|%d|%s|%s",
+//                username, score, mode.name(), difficulty.name()));
+//    }
+//
+//    public void requestTopScores(GameMode mode, DifficultyLevel difficulty) {
+//        sendMessage("LEADERBOARD_ACTION|GET_TOP|" + mode.name() + "|" + difficulty.name());
+//    }
+//
+//    public void requestUserRecords(GameMode mode, DifficultyLevel difficulty) {
+//        sendMessage("LEADERBOARD_ACTION|GET_MY_RECORDS|" + mode.name() + "|" + difficulty.name());
+//    }
 
     // 이벤트 처리 메서드
     public void handleEvent(String eventType, Object... data) {
@@ -181,7 +195,10 @@ public class GameClient implements AutoCloseable {
         }
     }
 
-    // 비정상적 연결 종료 처리 메서드
+    /*
+     * 서버와의 연결이 끊어졌을 때 호출
+     * 클라이언트의 상태를 초기화하고 이벤트를 발생
+     */
     private void handleConnectionLost() {
         if (!isRunning) {
             return;
@@ -229,7 +246,7 @@ public class GameClient implements AutoCloseable {
         isRunning = false;
         try {
             if (isConnected()) {
-                sendMessage("LOGOUT");
+                sendMessage(ClientCommand.LOGOUT);
                 Thread.sleep(100); // 메시지 전송 대기
             }
         } catch (InterruptedException e) {
