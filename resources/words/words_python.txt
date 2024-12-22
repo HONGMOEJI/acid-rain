@@ -1,4 +1,3 @@
-// words_python.txt
 def
 class
 import

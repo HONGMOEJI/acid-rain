@@ -1,6 +1,8 @@
 /*
  * client.app.GameClient.java
  * 게임 클라이언트 클래스
+ * 더 자세한 설명:
+ *
  */
 
 package client.app;
@@ -30,6 +32,13 @@ public class GameClient implements AutoCloseable {
     private final int port;
     private GameRoom currentRoom;
 
+    /**
+     * 게임 클라이언트의 초기화
+     *
+     * @param host 연결할 서버의 호스트 주소
+     * @param port 연결할 서버의 포트 번호
+     * @param username 클라이언트 사용자의 이름
+     */
     public GameClient(String host, int port, String username) {
         this.host = host;
         this.port = port;
@@ -41,7 +50,7 @@ public class GameClient implements AutoCloseable {
 
     /**
      * 서버와의 연결을 초기화하고 메시지 수신을 시작
-     * @throws IOException 서버 연결 실패 시 예외 발생
+     * @throws IOException 서버 연결 실패 또는 스트림 초기화 실패 시 예외 발생
      */
     public void connect() throws IOException {
         if (isRunning) {
@@ -118,6 +127,13 @@ public class GameClient implements AutoCloseable {
         sendMessage(message);
     }
 
+    /**
+     * 지정된 게임 방 참가 요청 전송
+     * 비밀번호가 설정된 방의 경우 비밀번호 포함 전송
+     *
+     * @param roomId 참가할 방의 고유 식별자
+     * @param password 방 비밀번호 (비밀번호가 없는 경우 null 또는 빈 문자열)
+     */
     public void sendJoinRoomRequest(String roomId, String password) {
         StringBuilder message = new StringBuilder(ClientCommand.JOIN_ROOM + "|" + roomId);
         if (password != null && !password.isEmpty()) {
@@ -126,6 +142,12 @@ public class GameClient implements AutoCloseable {
         sendMessage(message.toString());
     }
 
+    /**
+     * 현재 접속 중인 게임 방 퇴장 요청 전송
+     * 연결 해제 상태에서는 연결 종료 처리 수행
+     *
+     * @param roomId 퇴장할 방의 고유 식별자
+     */
     public void sendLeaveRoomRequest(String roomId) {
         if (!isConnected()) {
             handleConnectionLost();
@@ -141,10 +163,19 @@ public class GameClient implements AutoCloseable {
         }
     }
 
+    /**
+     * 게임 로비 내 채팅 메시지 전송
+     * @param roomId
+     * @param message
+     */
     public void sendRoomChatMessage(String roomId, String message) {
         sendMessage(ClientCommand.CHAT + "|" + roomId + "|" + message);
     }
 
+    /**
+     * 게임 시작 요청 전송
+     * @param roomId
+     */
     public void sendGameStartRequest(String roomId) {
         sendMessage(ClientCommand.START_GAME + "|" + roomId);
     }
@@ -183,7 +214,11 @@ public class GameClient implements AutoCloseable {
 //        sendMessage("LEADERBOARD_ACTION|GET_MY_RECORDS|" + mode.name() + "|" + difficulty.name());
 //    }
 
-    // 이벤트 처리 메서드
+    /**
+     * 이벤트 처리
+     * @param eventType
+     * @param data
+     */
     public void handleEvent(String eventType, Object... data) {
         if (eventListener != null) {
             try {
@@ -210,7 +245,7 @@ public class GameClient implements AutoCloseable {
         cleanup();
     }
 
-    // 리소스 정리 메서드
+    // 리소스 정리 메서드 -> 연결 종료 시, 사용 중인 버퍼와 소켓을 닫음
     private void cleanup() {
         try {
             if (reader != null) {
@@ -247,7 +282,7 @@ public class GameClient implements AutoCloseable {
         try {
             if (isConnected()) {
                 sendMessage(ClientCommand.LOGOUT);
-                Thread.sleep(100); // 메시지 전송 대기
+                Thread.sleep(100); // 메시지 전송 대기 -> 서버에서 메시지를 처리할 충분한 시간 확보 자원 관리를 위해 필수
             }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
@@ -262,7 +297,10 @@ public class GameClient implements AutoCloseable {
         disconnect();
     }
 
-    // Getter/Setter 메서드
+    /**
+     * 이벤트 리스너 설정 -> 이벤트 리스너 인터페이스 구현체로 설정
+     * @param listener
+     */
     public void setEventListener(GameEventListener listener) {
         this.eventListener = listener;
         logger.info("이벤트 리스너 설정됨: " + (listener != null ? listener.getClass().getSimpleName() : "null"));

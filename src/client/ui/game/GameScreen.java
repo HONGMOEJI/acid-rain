@@ -94,7 +94,24 @@ public class GameScreen extends JFrame implements GameEventListener {
         phLabel.setFont(FontManager.getFont(16f));
         phLabel.setForeground(ColorScheme.TEXT);
 
-        phMeter = new JProgressBar(0, 70);
+        // Look&Feel을 우회해야 산성도 바의 색상이 변경됨.. ->
+        phMeter = new JProgressBar(0, 70) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2d = (Graphics2D) g;
+                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING,
+                        RenderingHints.VALUE_ANTIALIAS_ON);
+
+                // 배경 그리기
+                g2d.setColor(getBackground());
+                g2d.fillRect(0, 0, getWidth(), getHeight());
+
+                // 진행 상태 그리기
+                g2d.setColor(getForeground());
+                int width = (int) (getWidth() * ((double) getValue() / getMaximum()));
+                g2d.fillRect(0, 0, width, getHeight());
+            }
+        };
         phMeter.setValue(70);
         phMeter.setPreferredSize(new Dimension(150, 20));
         phMeter.setForeground(ColorScheme.PRIMARY);
@@ -181,11 +198,13 @@ public class GameScreen extends JFrame implements GameEventListener {
         );
     }
 
+    // 화면 갱신용 -> 60fps로 화면 갱신 -> 다음에 단어 수가 많아지거나 동적인 요소가 많아지면 더블 버퍼링 적용 고려해야 함
     private void setupTimers() {
         screenRefreshTimer = new Timer(1000/60, e -> refreshScreen());
         screenRefreshTimer.start();
     }
 
+    // 게임 화면 렌더링 -> 상기한 더블 버퍼링 적용 시 이 메서드가 많이 바뀔 것..
     private void drawGame(Graphics g) {
         Graphics2D g2d = (Graphics2D) g;
         g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING,
@@ -196,18 +215,25 @@ public class GameScreen extends JFrame implements GameEventListener {
         synchronized(activeWords) {
             for (Word word : activeWords) {
                 if (word.hasSpecialEffect()) {
+                    // 아이템 이모지 그리기
                     g2d.setFont(FontManager.getEmojiFont(16f));
                     if (word.getEffect() == Word.SpecialEffect.SCORE_BOOST) {
-                        g2d.setColor(new Color(255, 215, 0));
+                        g2d.setColor(ColorScheme.ITEM_SCORE_BOOST);
                         g2d.drawString("⚡", word.getX() - 25, word.getY());
+                        // 단어도 같은 색상으로 설정
+                        g2d.setFont(FontManager.getFont(16f));
+                        g2d.setColor(ColorScheme.ITEM_SCORE_BOOST);
                     } else {
-                        g2d.setColor(new Color(147, 112, 219));
-                        g2d.drawString("⭐", word.getX() - 25, word.getY());  // 🌟 대신 ⭐ 사용
+                        g2d.setColor(ColorScheme.ITEM_BLIND);
+                        g2d.drawString("⭐", word.getX() - 25, word.getY());
+                        // 단어도 같은 색상으로 설정
+                        g2d.setFont(FontManager.getFont(16f));
+                        g2d.setColor(ColorScheme.ITEM_BLIND);
                     }
-                    g2d.setFont(FontManager.getFont(16f));
+                } else {
+                    // 일반 단어는 흰색으로
+                    g2d.setColor(Color.WHITE);
                 }
-
-                g2d.setColor(Color.WHITE);
                 g2d.drawString(word.getText(), word.getX(), word.getY());
             }
         }
@@ -240,16 +266,19 @@ public class GameScreen extends JFrame implements GameEventListener {
     private void updateGameInfo() {
         scoreLabel.setText(String.format("점수: %d", myScore));
         phLabel.setText(String.format("pH: %.1f", myPH));
+
+        // 먼저 색상을 설정
+        if (myPH < 5.0) {
+            phMeter.setForeground(ColorScheme.PH_DANGER);
+        } else if (myPH < 6.0) {
+            phMeter.setForeground(ColorScheme.PH_WARNING);
+        } else {
+            phMeter.setForeground(ColorScheme.PH_NORMAL);
+        }
+
+        // 그 다음에 값을 설정
         int phValue = (int)(myPH * 10);
         phMeter.setValue(phValue);
-
-        if (myPH < 5.0) {
-            phMeter.setForeground(Color.RED);
-        } else if (myPH < 6.0) {
-            phMeter.setForeground(Color.ORANGE);
-        } else {
-            phMeter.setForeground(ColorScheme.PRIMARY);
-        }
 
         opponentScoreLabel.setText(String.format("상대방 점수: %d", opponentScore));
     }
@@ -270,7 +299,7 @@ public class GameScreen extends JFrame implements GameEventListener {
             }
 
             // 게임 중 퇴장 메시지 전송
-            client.sendGameAction(roomId, "PLAYER_LEAVE_GAME", myName);
+            client.sendGameAction(roomId, ClientCommand.PLAYER_LEAVE_GAME, myName);
 
             // 방 나가기 처리
             client.sendMessage(ClientCommand.LEAVE_ROOM + "|" + roomId);

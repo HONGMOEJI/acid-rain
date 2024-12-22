@@ -241,44 +241,36 @@ public class RoomListDialog extends BaseDialog implements GameEventListener {
                     JOptionPane.WARNING_MESSAGE);
             return;
         }
-
-        if (selectedRoom.isPasswordRequired()) {
-            showPasswordDialog(selectedRoom);
-        } else {
-            client.sendJoinRoomRequest(selectedRoom.getRoomId(), null);
-        }
+        // 접속처리, 비밀번호에 대한 처리도 염두에 두었으나, 비밀번호 기능이 딱히 필요할 것 같지는 않아서 패스워드는 항상 null인 것으로 간주
+        client.sendJoinRoomRequest(selectedRoom.getRoomId(), null);
     }
 
-    // 비밀번호 입력 다이얼로그 표시
-    private void showPasswordDialog(GameRoom room) {
-        JPanel panel = new JPanel(new BorderLayout(10, 10));
-        panel.setPreferredSize(new Dimension(250, 80));
-
-        JLabel label = new JLabel("비밀번호를 입력하세요:");
-        label.setFont(FontManager.getFont(14f));
-        panel.add(label, BorderLayout.NORTH);
-
+    // 비밀번호 입력 다이얼로그를 표시하고 입력된 비밀번호를 반환
+    private String showPasswordInputDialog(GameRoom room) {
         JPasswordField passwordField = new JPasswordField();
         passwordField.setFont(FontManager.getFont(14f));
-        panel.add(passwordField, BorderLayout.CENTER);
+        passwordField.setBackground(ColorScheme.SECONDARY);
+        passwordField.setForeground(ColorScheme.TEXT);
+        passwordField.setCaretColor(ColorScheme.TEXT);
 
-        int option = JOptionPane.showConfirmDialog(this,
-                panel,
-                "비밀번호 입력",
+        int result = JOptionPane.showConfirmDialog(this,
+                passwordField,
+                "방 비밀번호를 입력하세요",
                 JOptionPane.OK_CANCEL_OPTION,
                 JOptionPane.PLAIN_MESSAGE);
 
-        if (option == JOptionPane.OK_OPTION) {
+        if (result == JOptionPane.OK_OPTION) {
             String password = new String(passwordField.getPassword());
-            if (!password.isEmpty()) {
-                client.sendJoinRoomRequest(room.getRoomId(), password);
-            } else {
+            if (password.isEmpty()) {
                 JOptionPane.showMessageDialog(this,
                         "비밀번호를 입력해주세요.",
                         "알림",
                         JOptionPane.WARNING_MESSAGE);
+                return null;
             }
+            return password;
         }
+        return null;  // 취소하거나 창을 닫은 경우
     }
 
     // 다이얼로그 닫기
@@ -427,14 +419,16 @@ public class RoomListDialog extends BaseDialog implements GameEventListener {
 
     private static class RoomListItem {
         private final String roomId;
+        private final boolean isPasswordRequired;
         private final String displayText;
 
         public RoomListItem(GameRoom room) {
             this.roomId = room.getRoomId();
+            this.isPasswordRequired = room.isPasswordRequired();
             this.displayText = String.format("[%s] %s %s (%d/%d) - %s - %s",
                     room.getHostName(),
                     room.getRoomName(),
-                    room.isPasswordRequired() ? "🔒" : "",
+                    isPasswordRequired ? "🔒" : "",
                     room.getCurrentPlayers(),
                     room.getMaxPlayers(),
                     room.getGameMode().getDisplayName(),
@@ -443,6 +437,10 @@ public class RoomListDialog extends BaseDialog implements GameEventListener {
 
         public String getRoomId() {
             return roomId;
+        }
+
+        public boolean isPasswordRequired() {
+            return isPasswordRequired;
         }
 
         @Override

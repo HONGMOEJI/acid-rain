@@ -1,3 +1,11 @@
+/*
+ * server.ClientHandler.java
+ * 클라이언트와의 통신을 담당하는 클래스
+ * 클라이언트로부터 메시지를 받아 처리하고, 서버로 메시지를 전송
+ * 클라이언트의 로그인, 방 입장/퇴장, 채팅, 게임 시작/액션 등의 요청을 처리
+ * 클라이언트의 메시지 처리 중 오류 발생 시 에러 메시지 전송
+ */
+
 package server;
 
 import client.event.GameEvent.*;
@@ -81,6 +89,7 @@ public class ClientHandler implements Runnable {
                 case ClientCommand.GAME_ACTION:
                     handleGameAction(parts);
                     break;
+                // not used just for testing
                 case "PING":
                     sendMessage("PONG");
                     break;
@@ -94,7 +103,7 @@ public class ClientHandler implements Runnable {
                     handleLogout();
                     break;
 
-                case "LEADERBOARD_ACTION":
+                case ClientEvent.LEADERBOARD_ACTION:
                     handleLeaderboardAction(parts);
                     break;
 

@@ -7,6 +7,7 @@ package client.ui.game;
 
 import client.app.GameClient;
 import client.event.GameEvent;
+import client.event.GameEvent.*;
 import client.event.GameEvent.ClientEvent;
 import client.event.GameEventListener;
 import client.ui.MainMenu;
@@ -62,15 +63,21 @@ public class GameLobby extends JFrame implements GameEventListener {
         client.setEventListener(this);
 
         // 서버에 플레이어 목록 요청
-        SwingUtilities.invokeLater(() -> {
+        // 서버에 플레이어 목록 요청
+        Thread initThread = new Thread(() -> {
             try {
-                Thread.sleep(100); // 서버 처리 시간 고려
-                client.sendPlayerListRequest(room.getRoomId());
+                // 서버 연결 안정화를 위한 대기
+                Thread.sleep(200);
+                client.sendMessage(ClientCommand.PLAYER_LIST + "|" + room.getRoomId());
                 logger.info("플레이어 목록 요청 전송: " + room.getRoomId());
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                logger.warning("플레이어 목록 요청 중 인터럽트 발생");
             } catch (Exception e) {
                 logger.severe("플레이어 목록 요청 실패: " + e.getMessage());
             }
         });
+        initThread.start();
 
         setVisible(true);
         logger.info("게임 로비 초기화 완료: " + room.getRoomName());

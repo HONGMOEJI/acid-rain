@@ -44,6 +44,7 @@ public class GameEvent {
         // 리더보드 이벤트
         public static final String TOP_SCORES = "TOP_SCORES";             // 최고 점수 데이터
         public static final String USER_RECORDS = "USER_RECORDS";         // 유저 기록 데이터
+        public static final String LEADERBOARD_ACTION = "LEADERBOARD_ACTION"; // 리더보드 액션
         public static final String LEADERBOARD_UPDATE = "LEADERBOARD_UPDATE"; // 리더보드 업데이트
 
         // 설정 관련 이벤트
@@ -66,7 +67,8 @@ public class GameEvent {
         // 방 관련 커맨드
         public static final String CREATE_ROOM = "CREATE_ROOM";          // 방 생성 요청
         public static final String JOIN_ROOM = "JOIN_ROOM";             // 방 입장 요청
-        public static final String LEAVE_ROOM = "LEAVE_ROOM";           // 방 퇴장 요청
+        public static final String PLAYER_LEAVE_GAME = "PLAYER_LEAVE_GAME"; // 게임 퇴장 요청 -> 인 게임에서 나갔을 때 처리임을 주의
+        public static final String LEAVE_ROOM = "LEAVE_ROOM";           // 방 퇴장 요청 -> 게임 로비 퇴장 처리임을 주의
         public static final String ROOM_LIST = "ROOM_LIST";             // 방 목록 요청
         public static final String PLAYER_LIST = "PLAYER_LIST";         // 플레이어 목록 요청
 

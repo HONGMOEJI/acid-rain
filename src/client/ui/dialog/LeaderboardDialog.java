@@ -7,6 +7,7 @@
 package client.ui.dialog;
 
 import client.app.GameClient;
+import client.event.GameEvent.*;
 import client.event.GameEventListener;
 import client.ui.theme.ColorScheme;
 import client.ui.theme.FontManager;
@@ -112,6 +113,7 @@ public class LeaderboardDialog extends BaseDialog implements GameEventListener {
     }
 
     // 게임 모드 래퍼 배열 생성
+    // why? -> JComboBox에서 GameMode를 바로 사용할 수 없기 때문에 래퍼 클래스를 사용
     private GameModeWrapper[] createGameModeWrappers() {
         GameMode[] modes = GameMode.values();
         GameModeWrapper[] wrappers = new GameModeWrapper[modes.length];
@@ -122,6 +124,7 @@ public class LeaderboardDialog extends BaseDialog implements GameEventListener {
     }
 
     // 난이도 래퍼 배열 생성
+    // why? -> JComboBox에서 DifficultyLevel을 바로 사용할 수 없기 때문에 래퍼 클래스를 사용
     private DifficultyWrapper[] createDifficultyWrappers() {
         DifficultyLevel[] difficulties = DifficultyLevel.values();
         DifficultyWrapper[] wrappers = new DifficultyWrapper[difficulties.length];
@@ -196,8 +199,8 @@ public class LeaderboardDialog extends BaseDialog implements GameEventListener {
         DifficultyLevel difficulty = ((DifficultyWrapper) difficultyFilter.getSelectedItem()).getDifficulty();
 
         // 서버에 데이터 요청
-        client.sendMessage("LEADERBOARD_ACTION|GET_TOP|" + mode.name() + "|" + difficulty.name());
-        client.sendMessage("LEADERBOARD_ACTION|GET_MY_RECORDS|" + mode.name() + "|" + difficulty.name());
+        client.sendMessage(ClientEvent.LEADERBOARD_ACTION + "|GET_TOP|" + mode.name() + "|" + difficulty.name());
+        client.sendMessage(ClientEvent.LEADERBOARD_ACTION + "|GET_MY_RECORDS|" + mode.name() + "|" + difficulty.name());
 
     }
 

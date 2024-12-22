@@ -1,3 +1,9 @@
+/*
+ * server.GameServer.java
+ * 게임 서버 클래스
+ * 클라이언트의 연결을 수락하고 새로운 클라이언트를 처리하는 메서드
+ */
+
 package server;
 
 import game.model.DifficultyLevel;
@@ -19,6 +25,7 @@ import server.game.ServerGameController;
 public class GameServer {
     private static final Logger logger = Logger.getLogger(GameServer.class.getName());
     private final int port;
+    // ServerSocket -> very Important...!!@@
     private ServerSocket serverSocket;
     private volatile boolean running;
     private final List<ClientHandler> clients = Collections.synchronizedList(new ArrayList<>());
@@ -37,6 +44,7 @@ public class GameServer {
             running = true;
             logger.info("서버가 포트 " + port + "에서 시작되었습니다.");
 
+            // 클라이언트의 연결을 수락하고 새로운 클라이언트를 처리하는 메서드
             while (running) {
                 try {
                     Socket clientSocket = serverSocket.accept();
@@ -55,6 +63,7 @@ public class GameServer {
         }
     }
 
+    // 클라이언트 연결 이후, 해당 클라이언트의 스레드를 시작함 -> 클라이언트 핸들러
     private void handleNewConnection(Socket clientSocket) {
         try {
             ClientHandler clientHandler = new ClientHandler(clientSocket, this);
@@ -163,6 +172,7 @@ public class GameServer {
         logger.info(client.getUsername() + "님이 " + roomId + " 방에 입장했습니다.");
     }
 
+    // 방을 나갔을 때, 액션 -> 방장이 나갈 경우 방장 다음으로 들어온 사람이 방장이 됨. -> UI 업데이트 필요
     public synchronized void leaveRoom(String roomId, ClientHandler client) {
         Set<ClientHandler> players = roomPlayers.get(roomId);
         GameRoom room = rooms.get(roomId);
@@ -200,12 +210,14 @@ public class GameServer {
         logger.info(client.getUsername() + "님이 " + roomId + " 방에서 퇴장했습니다.");
     }
 
+    // 게임 대기실 채팅 메시지 처리
     public void handleChat(String roomId, ClientHandler sender, String message) {
         if (rooms.containsKey(roomId)) {
             broadcastToRoom(roomId, ServerMessage.CHAT + "|" + sender.getUsername() + "|" + message);
         }
     }
 
+    // 게임 생성 이후 게임 방에서 게임 설정을 변경할 경우에 대한 처리 ㅊ
     public void updateGameSettings(String roomId, String settingType, String newValue, ClientHandler updater) {
         GameRoom room = rooms.get(roomId);
         if (room == null || !updater.getUsername().equals(room.getHostName())) {
@@ -231,6 +243,7 @@ public class GameServer {
         }
     }
 
+    // 게임 시작
     public void startGame(String roomId, ClientHandler starter) {
         GameRoom room = rooms.get(roomId);
         if (room == null || !starter.getUsername().equals(room.getHostName())) {
@@ -238,6 +251,7 @@ public class GameServer {
             return;
         }
 
+        // 게임 시작이 가능한지 확인
         if (!room.canStart()) {
             starter.sendMessage(ServerMessage.ERROR + "|아직 게임을 시작할 수 없습니다.");
             return;
@@ -305,7 +319,7 @@ public class GameServer {
                         player.sendMessage(ServerMessage.ERROR + "|놓친 단어 정보가 없습니다.");
                     }
                 }
-                case "PLAYER_LEAVE_GAME" -> {
+                case ClientCommand.PLAYER_LEAVE_GAME -> {
                     logger.info("플레이어 게임 퇴장 - 플레이어: " + player.getUsername() + ", 룸: " + roomId);
                     controller.handlePlayerLeaveGame(player);
                 }

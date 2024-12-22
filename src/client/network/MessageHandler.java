@@ -21,6 +21,10 @@ public class MessageHandler {
         this.gameClient = gameClient;
     }
 
+    /**
+     * 서버로부터 수신한 메시지를 처리
+     * @param message
+     */
     public void handleMessage(String message) {
         try {
             logger.info("수신된 메시지: " + message);
@@ -72,6 +76,7 @@ public class MessageHandler {
         }
     }
 
+    // 유저 수 업데이트
     private void handleUsers(String[] parts) {
         if (parts.length >= 2) {
             try {
@@ -83,6 +88,7 @@ public class MessageHandler {
         }
     }
 
+    // 방 목록 업데이트
     private void handleRoomList(String[] parts) {
         if (parts.length > 1) {
             String[] roomInfos = Arrays.copyOfRange(parts, 1, parts.length);
@@ -92,19 +98,27 @@ public class MessageHandler {
         }
     }
 
+    // 플레이어 목록 업데이트
     private void handlePlayerList(String[] parts) {
         if (parts.length >= 4) {
             String roomId = parts[1];
             try {
                 int playerCount = Integer.parseInt(parts[2]);
-                String[] players = parts[3].split(";");
+                String[] players = parts[3].isEmpty() ? new String[0] : parts[3].split(";");
+                // 플레이어 목록이 비어있더라도 업데이트 이벤트 발생
                 gameClient.handleEvent(ClientEvent.PLAYER_UPDATED, roomId, playerCount, players);
+                logger.info("플레이어 목록 업데이트: 방(" + roomId + "), 플레이어 수(" + playerCount + ")");
             } catch (NumberFormatException e) {
                 logger.severe("플레이어 수 파싱 오류: " + parts[2]);
+            } catch (Exception e) {
+                logger.severe("플레이어 목록 처리 중 오류 발생: " + e.getMessage());
             }
+        } else {
+            logger.warning("잘못된 플레이어 목록 메시지 형식: " + String.join("|", parts));
         }
     }
 
+    // 방 생성 처리
     private void handleCreateRoom(String[] parts) {
         if (parts.length >= 3) {
             boolean success = Boolean.parseBoolean(parts[1]);
@@ -120,6 +134,7 @@ public class MessageHandler {
         }
     }
 
+    // 방 입장 처리
     private void handleJoinRoom(String[] parts) {
         if (parts.length >= 3) {
             boolean success = Boolean.parseBoolean(parts[1]);
@@ -133,6 +148,7 @@ public class MessageHandler {
         }
     }
 
+    // 플레이어 정보 업데이트
     private void handlePlayerUpdate(String[] parts) {
         if (parts.length >= 4) {
             String roomId = parts[1];
@@ -146,6 +162,7 @@ public class MessageHandler {
         }
     }
 
+    // 방 설정 변경 처리
     private void handleSettingsUpdate(String[] parts) {
         if (parts.length >= 4) {
             String roomId = parts[1];
@@ -155,10 +172,12 @@ public class MessageHandler {
         }
     }
 
+    // 게임 시작 처리
     private void handleGameStart() {
         gameClient.handleEvent(ClientEvent.GAME_STARTED);
     }
 
+    // 단어 생성
     private void handleWordSpawned(String[] parts) {
         if (parts.length >= 4) {
             String wordText = parts[2];
@@ -180,6 +199,7 @@ public class MessageHandler {
         }
     }
 
+    // 산성도 업데이트
     private void handlePHUpdate(String[] parts) {
         if (parts.length >= 4) {
             String roomId = parts[1];
@@ -193,6 +213,7 @@ public class MessageHandler {
         }
     }
 
+    // 단어가 매치되었을 때 처리
     private void handleWordMatched(String[] parts) {
         if (parts.length >= 5) {
             String wordText = parts[2];
@@ -206,6 +227,7 @@ public class MessageHandler {
         }
     }
 
+    // 단어를 놓쳤을 때 처리
     private void handleWordMissed(String[] parts) {
         if (parts.length >= 5) {
             String missedWord = parts[2];
@@ -219,6 +241,7 @@ public class MessageHandler {
         }
     }
 
+    // 블라인드 효과 처리
     private void handleBlindEffect(String[] parts) {
         if (parts.length >= 4) {
             String targetPlayer = parts[2];
@@ -231,6 +254,7 @@ public class MessageHandler {
         }
     }
 
+    // pH == 0 -> 게임 오버가 되도록 처리 / 상대 플레이어가 나갔을 경우 몰수 패배 처리
     private void handleGameOver(String[] parts) {
         if (parts.length >= 5) {
             String roomId = parts[1];
@@ -247,6 +271,7 @@ public class MessageHandler {
         }
     }
 
+    // 리더보드 데이터 처리
     private void handleLeaderboardData(String[] parts) {
         if (parts.length >= 3) {
             String type = parts[1];
@@ -286,6 +311,7 @@ public class MessageHandler {
         }
     }
 
+    // 채팅 메시지 처리
     private void handleChat(String[] parts) {
         if (parts.length >= 3) {
             String username = parts[1];
@@ -294,6 +320,7 @@ public class MessageHandler {
         }
     }
 
+    // 방장이 나갔을 때 처리
     private void handleHostLeft(String[] parts) {
         if (parts.length >= 3) {
             String roomId = parts[1];
@@ -302,6 +329,7 @@ public class MessageHandler {
         }
     }
 
+    // 방이 닫혔을 때 처리
     private void handleRoomClosed(String[] parts) {
         if (parts.length >= 3) {
             String roomId = parts[1];
@@ -310,6 +338,7 @@ public class MessageHandler {
         }
     }
 
+    // 기존 방장이 나가고 새로운 방장이 선정됐을 때 처리
     private void handleNewHost(String[] parts) {
         if (parts.length >= 3) {
             String roomId = parts[1];

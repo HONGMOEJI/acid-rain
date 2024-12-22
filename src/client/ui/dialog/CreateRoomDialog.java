@@ -49,8 +49,9 @@ public class CreateRoomDialog extends BaseDialog {
         roomNameField = createTextField();
         mainPanel.add(roomNameField, gbc);
 
-        gbc.gridx = 0; gbc.gridy = 1;
-        addLabel("비밀번호:", gbc);
+        // 비밀번호 필드는 현재 사용하지 않음
+//        gbc.gridx = 0; gbc.gridy = 1;
+//        addLabel("비밀번호:", gbc);
 
         gbc.gridx = 1;
         passwordField = createPasswordField();
@@ -111,6 +112,7 @@ public class CreateRoomDialog extends BaseDialog {
         comboBox.setBorder(BorderFactory.createLineBorder(ColorScheme.PRIMARY));
     }
 
+    // 단축키
     private void setupKeyboardShortcuts() {
         getRootPane().registerKeyboardAction(
                 e -> dispose(),
@@ -125,6 +127,7 @@ public class CreateRoomDialog extends BaseDialog {
         );
     }
 
+    // 다이얼로그 창이 열릴 때 방 제목 입력 필드에 포커스
     private void setupWindowListener() {
         addWindowListener(new WindowAdapter() {
             @Override
@@ -134,6 +137,7 @@ public class CreateRoomDialog extends BaseDialog {
         });
     }
 
+    // 방 만들기 버튼 클릭 시 호출
     private void handleCreateRoom() {
         if (validateInput()) {
             createdRoom = new GameRoom(
@@ -148,6 +152,7 @@ public class CreateRoomDialog extends BaseDialog {
         }
     }
 
+    // 유효성 검사
     private boolean validateInput() {
         String roomName = roomNameField.getText().trim();
         if (roomName.isEmpty()) {

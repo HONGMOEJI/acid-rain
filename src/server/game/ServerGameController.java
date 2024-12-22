@@ -1,3 +1,14 @@
+/*
+ * server.game.ServerGameController.java
+ * 게임의 진행을 관리하는 클래스
+ * 단어 생성, pH 체크, 특수 효과 처리 등을 담당
+ * 게임 시작, 종료, 플레이어 입력 처리 등의 기능을 제공
+ * 게임의 상태를 관리하고, 게임이 종료되면 리더보드에 점수를 등록함
+ * 게임이 종료되면 스케줄링된 작업을 모두 중지함
+ * 게임이 종료되면 게임 결과를 모든 플레이어에게 전송함
+ * 게임이 종료되면 리더보드에 점수를 등록함
+ */
+
 package server.game;
 
 import client.event.GameEvent.ServerMessage;

@@ -1,4 +1,3 @@
-// words_c.txt
 #include
 #define
 #ifndef

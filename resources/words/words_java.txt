@@ -1,4 +1,3 @@
-// words_java.txt
 public
 class
 interface

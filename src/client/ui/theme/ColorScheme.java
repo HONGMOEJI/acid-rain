@@ -14,6 +14,15 @@ public class ColorScheme {
     public static final Color ACCENT = new Color(91, 205, 255);
     public static final Color ERROR = new Color(255, 99, 71);
 
+    // 아이템 효과용 색상
+    public static final Color ITEM_SCORE_BOOST = new Color(255, 215, 0);  // 골드색 번개
+    public static final Color ITEM_BLIND = new Color(147, 112, 219);      // 보라색 별
+
+    // pH 단계별 색상
+    public static final Color PH_DANGER = new Color(255, 99, 71);    // pH < 5.0
+    public static final Color PH_WARNING = new Color(255, 165, 0);   // pH < 6.0
+    public static final Color PH_NORMAL = PRIMARY;                   // 기본값
+
     public static Color getTextColorForBackground(Color background) {
         double brightness = (background.getRed() * 299 +
                 background.getGreen() * 587 +

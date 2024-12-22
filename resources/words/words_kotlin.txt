@@ -1,4 +1,3 @@
-// words_kotlin.txt
 fun
 val
 var
