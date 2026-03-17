@@ -68,7 +68,7 @@ public class GameLobby extends JFrame implements GameEventListener {
             try {
                 // 서버 연결 안정화를 위한 대기
                 Thread.sleep(200);
-                client.sendMessage(ClientCommand.PLAYER_LIST + "|" + room.getRoomId());
+                client.sendPlayerListRequest(room.getRoomId());
                 logger.info("플레이어 목록 요청 전송: " + room.getRoomId());
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
@@ -185,16 +185,14 @@ public class GameLobby extends JFrame implements GameEventListener {
         gameModeCombo.addActionListener(e -> {
             if (!isClosing && e.getSource() == gameModeCombo) {
                 GameMode selectedMode = (GameMode) gameModeCombo.getSelectedItem();
-                client.sendMessage(GameEvent.ServerMessage.SETTINGS_UPDATE + "|" + room.getRoomId() + "|MODE|" +
-                        selectedMode.getDisplayName());
+                client.sendUpdateSettingsRequest(room.getRoomId(), "MODE", selectedMode.getDisplayName());
             }
         });
 
         difficultyCombo.addActionListener(e -> {
             if (!isClosing && e.getSource() == difficultyCombo) {
                 DifficultyLevel selectedDifficulty = (DifficultyLevel) difficultyCombo.getSelectedItem();
-                client.sendMessage(GameEvent.ServerMessage.SETTINGS_UPDATE + "|" + room.getRoomId() + "|DIFFICULTY|" +
-                        selectedDifficulty.getDisplayName());
+                client.sendUpdateSettingsRequest(room.getRoomId(), "DIFFICULTY", selectedDifficulty.getDisplayName());
             }
         });
     }
@@ -436,7 +434,7 @@ public class GameLobby extends JFrame implements GameEventListener {
     private void startGame() {
         if (!room.canStart()) {
             JOptionPane.showMessageDialog(this,
-                    "두 명의 플레이어가 필요합니다.",
+                    "최소 두 명의 플레이어가 필요합니다.",
                     "게임 시작 불가",
                     JOptionPane.WARNING_MESSAGE);
             return;
@@ -482,23 +480,16 @@ public class GameLobby extends JFrame implements GameEventListener {
         }
     }
 
-    private void handleGameStart() {
-        setVisible(false);
-
-        String myName = client.getUsername();
-        String opponentId = null;
+    private void handleGameStart(Object... data) {
         String[] players = room.getPlayers();
-        if (players != null && players.length > 1) {
-            for (String p : players) {
-                if (!p.equals(myName)) {
-                    opponentId = p;
-                    break;
-                }
-            }
+        if (data.length >= 2 && data[1] instanceof String[]) {
+            players = (String[]) data[1];
+            room.setPlayers(players);
         }
 
-        GameScreen gameScreen = new GameScreen(client, room.getRoomId(), myName, opponentId);
-        client.setEventListener(gameScreen);
+        GameScreen gameScreen = new GameScreen(client, room.getRoomId(), client.getUsername(), players, mainFrame);
+        isClosing = true;
+        super.dispose();
         gameScreen.setVisible(true);
     }
 
@@ -507,7 +498,7 @@ public class GameLobby extends JFrame implements GameEventListener {
     }
 
     private String getStatusText() {
-        if (isHost() && room.getCurrentPlayers() == room.getMaxPlayers()) {
+        if (isHost() && room.canStart()) {
             return "F5를 눌러 게임을 시작하세요!";
         }
         return String.format("대기 중... (%d/%d)",
@@ -562,7 +553,7 @@ public class GameLobby extends JFrame implements GameEventListener {
                 case ClientEvent.PLAYER_UPDATED -> handlePlayerUpdate(data);
                 case ClientEvent.CHAT_RECEIVED -> handleChatReceived(data);
                 case ClientEvent.SETTINGS_UPDATED -> handleSettingsUpdate(data);
-                case ClientEvent.GAME_STARTED -> handleGameStart();
+                case ClientEvent.GAME_STARTED -> handleGameStart(data);
                 case ClientEvent.HOST_LEFT -> handleHostLeft(data);
                 case ClientEvent.NEW_HOST -> handleNewHost(data);
                 case ClientEvent.ROOM_CLOSED -> handleRoomClosed(data);

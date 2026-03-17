@@ -71,6 +71,7 @@ public class GameEvent {
         public static final String LEAVE_ROOM = "LEAVE_ROOM";           // 방 퇴장 요청 -> 게임 로비 퇴장 처리임을 주의
         public static final String ROOM_LIST = "ROOM_LIST";             // 방 목록 요청
         public static final String PLAYER_LIST = "PLAYER_LIST";         // 플레이어 목록 요청
+        public static final String UPDATE_SETTINGS = "UPDATE_SETTINGS"; // 방 설정 변경 요청
 
         // 게임 플레이 관련 커맨드
         public static final String START_GAME = "START_GAME";           // 게임 시작 요청
@@ -79,6 +80,9 @@ public class GameEvent {
 
         // 채팅 관련 커맨드
         public static final String CHAT = "CHAT";                       // 채팅 메시지 전송 ** 서로 다름 **
+
+        // 리더보드 관련 커맨드
+        public static final String LEADERBOARD_ACTION = "LEADERBOARD_ACTION";
 
         // must be removed ...
         public static final String USERS_REQUEST = "USERS_REQUEST";     // 전체 유저수 요청

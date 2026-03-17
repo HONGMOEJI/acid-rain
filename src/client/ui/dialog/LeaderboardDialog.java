@@ -199,8 +199,8 @@ public class LeaderboardDialog extends BaseDialog implements GameEventListener {
         DifficultyLevel difficulty = ((DifficultyWrapper) difficultyFilter.getSelectedItem()).getDifficulty();
 
         // 서버에 데이터 요청
-        client.sendMessage(ClientEvent.LEADERBOARD_ACTION + "|GET_TOP|" + mode.name() + "|" + difficulty.name());
-        client.sendMessage(ClientEvent.LEADERBOARD_ACTION + "|GET_MY_RECORDS|" + mode.name() + "|" + difficulty.name());
+        client.sendMessage(ClientCommand.LEADERBOARD_ACTION + "|GET_TOP|" + mode.name() + "|" + difficulty.name());
+        client.sendMessage(ClientCommand.LEADERBOARD_ACTION + "|GET_MY_RECORDS|" + mode.name() + "|" + difficulty.name());
 
     }
 

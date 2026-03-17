@@ -7,6 +7,7 @@ package client.ui.dialog;
 import client.ui.components.GameTextField;
 import client.ui.components.RetroButton;
 import client.config.GameConfig;
+import game.model.GameRoom;
 
 import javax.swing.*;
 import java.awt.*;
@@ -76,8 +77,13 @@ public class LoginDialog extends BaseDialog {
     }
 
     private boolean validateInput() {
-        if (nicknameField.getText().trim().isEmpty()) {
+        String nickname = nicknameField.getText().trim();
+        if (nickname.isEmpty()) {
             showError("닉네임을 입력해주세요.");
+            return false;
+        }
+        if (GameRoom.containsReservedDelimiter(nickname)) {
+            showError("닉네임에는 | , ; : 문자를 사용할 수 없습니다.");
             return false;
         }
         if (serverAddressField.getText().trim().isEmpty()) {

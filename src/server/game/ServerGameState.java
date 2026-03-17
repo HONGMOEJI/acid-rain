@@ -37,6 +37,8 @@ public class ServerGameState {
 
     private void initializePlayers() {
         synchronized (this) {
+            scores.clear();
+            phValues.clear();
             for (String player : room.getPlayers()) {
                 scores.put(player, 0);
                 phValues.put(player, INITIAL_PH);
@@ -101,9 +103,10 @@ public class ServerGameState {
                 addScore(player, finalPoints);
                 adjustPH(player, 0.3);
 
-                String opponent = getOpponentOf(player);
-                if (opponent != null) {
-                    decreasePH(opponent, 0.2);
+                for (String otherPlayer : room.getPlayers()) {
+                    if (!otherPlayer.equals(player)) {
+                        decreasePH(otherPlayer, 0.2);
+                    }
                 }
 
                 return word; // 매칭된 단어 반환
@@ -193,19 +196,15 @@ public class ServerGameState {
         return scores.getOrDefault(player, 0);
     }
 
-    public int getOpponentScore(String player) {
+    public List<String> getOtherPlayers(String player) {
         synchronized (this) {
-            for (String p : scores.keySet()) {
-                if (!p.equals(player)) return scores.get(p);
+            List<String> otherPlayers = new ArrayList<>();
+            for (String otherPlayer : room.getPlayers()) {
+                if (!otherPlayer.equals(player)) {
+                    otherPlayers.add(otherPlayer);
+                }
             }
-            return 0;
-        }
-    }
-
-    public String getOpponentOf(String player) {
-        synchronized (this) {
-            return room.getPlayers()[0].equals(player) ?
-                    room.getPlayers()[1] : room.getPlayers()[0];
+            return otherPlayers;
         }
     }
 

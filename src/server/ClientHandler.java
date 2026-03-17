@@ -9,10 +9,13 @@
 package server;
 
 import client.event.GameEvent.*;
+import game.model.GameRoom;
 
 import java.io.*;
 import java.net.Socket;
 import java.net.SocketException;
+import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.logging.Logger;
 
 public class ClientHandler implements Runnable {
@@ -30,8 +33,8 @@ public class ClientHandler implements Runnable {
         this.socket = socket;
         this.server = server;
         try {
-            this.out = new PrintWriter(new OutputStreamWriter(socket.getOutputStream(), "UTF-8"), true);
-            this.in = new BufferedReader(new InputStreamReader(socket.getInputStream(), "UTF-8"));
+            this.out = new PrintWriter(new OutputStreamWriter(socket.getOutputStream(), StandardCharsets.UTF_8), true);
+            this.in = new BufferedReader(new InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8));
         } catch (IOException e) {
             logger.severe("클라이언트 핸들러 초기화 실패: " + e.getMessage());
             running = false;
@@ -60,7 +63,7 @@ public class ClientHandler implements Runnable {
  
     // 클라이언트의 메시지를 처리하는 메서드 ** 중요 **
     private void processMessage(String message) {
-        String[] parts = message.split("\\|");
+        String[] parts = message.split("\\|", -1);
         String messageType = parts[0];
 
         try {
@@ -80,7 +83,7 @@ public class ClientHandler implements Runnable {
                 case ClientCommand.CHAT:
                     handleChat(parts);
                     break;
-                case ClientEvent.SETTINGS_UPDATED:
+                case ClientCommand.UPDATE_SETTINGS:
                     handleSettingsUpdate(parts);
                     break;
                 case ClientCommand.START_GAME:
@@ -103,7 +106,7 @@ public class ClientHandler implements Runnable {
                     handleLogout();
                     break;
 
-                case ClientEvent.LEADERBOARD_ACTION:
+                case ClientCommand.LEADERBOARD_ACTION:
                     handleLeaderboardAction(parts);
                     break;
 
@@ -124,7 +127,13 @@ public class ClientHandler implements Runnable {
 
     private void handleLogin(String[] parts) {
         if (parts.length >= 2) {
-            this.username = parts[1];
+            String requestedUsername = parts[1].trim();
+            if (requestedUsername.isEmpty() || GameRoom.containsReservedDelimiter(requestedUsername)) {
+                sendMessage(ServerMessage.ERROR + "|사용할 수 없는 닉네임입니다.");
+                return;
+            }
+
+            this.username = requestedUsername;
             logger.info("로그인: " + username);
             server.broadcastUserCount();
             server.broadcastRoomList();
@@ -152,7 +161,8 @@ public class ClientHandler implements Runnable {
 
     private void handleChat(String[] parts) {
         if (parts.length >= 3 && currentRoomId != null) {
-            server.handleChat(currentRoomId, this, parts[2]);
+            String chatMessage = String.join("|", Arrays.copyOfRange(parts, 2, parts.length));
+            server.handleChat(currentRoomId, this, chatMessage);
         } else {
             sendMessage(ServerMessage.ERROR + "|잘못된 채팅 메시지입니다.");
         }

@@ -10,9 +10,12 @@ import java.util.List;
 import java.util.Arrays;
 
 public class GameRoom {
+    private static final String[] DELIMITER_TOKENS = {"|", ",", ";", ":"};
+
     private String roomId;
     private String roomName;
     private String password;
+    private boolean passwordRequired;
     private String hostName;
     private GameMode gameMode;
     private DifficultyLevel difficulty;
@@ -36,6 +39,7 @@ public class GameRoom {
                     DifficultyLevel difficulty, int maxPlayers) {
         this.roomName = roomName;
         this.password = password;
+        this.passwordRequired = password != null && !password.isEmpty();
         this.gameMode = gameMode;
         this.difficulty = difficulty;
         this.maxPlayers = maxPlayers;
@@ -45,7 +49,7 @@ public class GameRoom {
         this.players = new ArrayList<>();
     }
 
-    // roomString format: "roomId,roomName,currentPlayers,maxPlayers,gameMode,difficulty,hostName,players[,password]"
+    // roomString format: "roomId,roomName,currentPlayers,maxPlayers,gameMode,difficulty,hostName,passwordRequired"
     public static GameRoom fromString(String roomString) {
         String[] parts = roomString.split(",");
         if (parts.length < 7) return null;
@@ -60,12 +64,12 @@ public class GameRoom {
         room.hostName = parts[6];
 
         if (parts.length > 7) {
-            String[] playerList = parts[7].split(";");
-            room.setPlayers(playerList);
-        }
-
-        if (parts.length > 8) {
-            room.password = parts[8];
+            if (isBooleanToken(parts[7])) {
+                room.passwordRequired = Boolean.parseBoolean(parts[7]);
+            } else {
+                String[] playerList = parts[7].isEmpty() ? new String[0] : parts[7].split(";");
+                room.setPlayers(playerList);
+            }
         }
 
         return room;
@@ -73,11 +77,10 @@ public class GameRoom {
 
     @Override
     public String toString() {
-        String playerList = String.join(";", players);
-        return String.format("%s,%s,%d,%d,%s,%s,%s,%s,%s",
+        return String.format("%s,%s,%d,%d,%s,%s,%s,%s",
                 roomId, roomName, currentPlayers, maxPlayers,
                 gameMode.getDisplayName(), difficulty.getDisplayName(),
-                hostName, playerList, password);
+                hostName, passwordRequired);
     }
 
     // 비밀번호 검증
@@ -104,11 +107,11 @@ public class GameRoom {
     }
 
     public boolean isPasswordRequired() {
-        return password != null && !password.isEmpty();
+        return passwordRequired || (password != null && !password.isEmpty());
     }
 
     public boolean canStart() {
-        return currentPlayers == maxPlayers && !inGame;
+        return currentPlayers >= 2 && !inGame;
     }
 
     // 플레이어 관리 메서드들
@@ -160,6 +163,7 @@ public class GameRoom {
 
     public void setPassword(String password) {
         this.password = password;
+        this.passwordRequired = password != null && !password.isEmpty();
     }
 
     public String getHostName() {
@@ -208,5 +212,22 @@ public class GameRoom {
 
     public void setInGame(boolean inGame) {
         this.inGame = inGame;
+    }
+
+    public static boolean containsReservedDelimiter(String value) {
+        if (value == null) {
+            return false;
+        }
+
+        for (String token : DELIMITER_TOKENS) {
+            if (value.contains(token)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean isBooleanToken(String value) {
+        return "true".equalsIgnoreCase(value) || "false".equalsIgnoreCase(value);
     }
 }

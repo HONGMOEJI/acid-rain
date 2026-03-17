@@ -21,6 +21,7 @@ import server.GameServer;
 import server.ClientHandler;
 
 import java.util.concurrent.*;
+import java.util.Map;
 import java.util.logging.Logger;
 
 public class ServerGameController {
@@ -39,6 +40,7 @@ public class ServerGameController {
     private static final double PH_CHECK_INTERVAL = 1.0; // 초
     private static final double PH_DECREASE_AMOUNT = 0.2;
     private static final int BLIND_EFFECT_DURATION = 5000; // 5초
+    private volatile boolean stopped;
 
     public ServerGameController(GameServer server, GameRoom room) {
         this.server = server;
@@ -125,35 +127,20 @@ public class ServerGameController {
             Word matchedWord = gameState.matchWord(typedWord, player.getUsername());
             if (matchedWord != null) {
                 int newScore = gameState.getPlayerScore(player.getUsername());
-                String opponent = gameState.getOpponentOf(player.getUsername());
-                double opponentPH = opponent != null ? gameState.getPlayerPH(opponent) : 0.0;
-                double playerPH = gameState.getPlayerPH(player.getUsername());
 
-                // WORD_MATCHED 메시지 전송 (점수 정보 포함)
                 server.broadcastToRoom(room.getRoomId(),
                         String.format(ServerMessage.WORD_MATCHED + "|%s|%s|%s|%d",
                                 room.getRoomId(), matchedWord.getText(), player.getUsername(), newScore));
 
-                // pH 업데이트 메시지
-                server.broadcastToRoom(room.getRoomId(),
-                        String.format(ServerMessage.PH_UPDATE + "|%s|%s|%.2f",
-                                room.getRoomId(), player.getUsername(), playerPH));
+                broadcastPHUpdates();
 
-                if (opponent != null) {
-                    server.broadcastToRoom(room.getRoomId(),
-                            String.format(ServerMessage.PH_UPDATE + "|%s|%s|%.2f",
-                                    room.getRoomId(), opponent, opponentPH));
-                }
-
-                // 특수효과 처리
                 if (matchedWord.hasSpecialEffect()) {
                     switch (matchedWord.getEffect()) {
                         case BLIND_OPPONENT:
-                            if (opponent != null) {
-                                // BLIND_EFFECT 메시지 전송 (예: 5초=5000ms)
+                            for (String otherPlayer : gameState.getOtherPlayers(player.getUsername())) {
                                 server.broadcastToRoom(room.getRoomId(),
                                         String.format(ServerMessage.BLIND_EFFECT + "|%s|%s|%d",
-                                                room.getRoomId(), opponent, BLIND_EFFECT_DURATION));
+                                                room.getRoomId(), otherPlayer, BLIND_EFFECT_DURATION));
                             }
                             break;
                         case SCORE_BOOST:
@@ -200,29 +187,23 @@ public class ServerGameController {
 
         try {
             String leavingPlayer = player.getUsername();
-            String opponent = gameState.getOpponentOf(leavingPlayer);
-
-            // 게임 상태 종료
             stopGame();
 
-            if (opponent != null) {
-                // 점수 정보 가져오기
-                int winnerScore = gameState.getPlayerScore(opponent);
-                int loserScore = gameState.getPlayerScore(leavingPlayer);
+            String winner = determineWinnerExcluding(leavingPlayer);
+            if (winner != null) {
+                int winnerScore = gameState.getPlayerScore(winner);
 
-                // 리더보드 등록 시도
-                if (leaderboardManager.addEntry(opponent, winnerScore,
+                if (leaderboardManager.addEntry(winner, winnerScore,
                         room.getGameMode(), room.getDifficulty())) {
-                    int rank = leaderboardManager.getUserRank(opponent,
+                    int rank = leaderboardManager.getUserRank(winner,
                             room.getGameMode(), room.getDifficulty());
                     server.broadcastToRoom(room.getRoomId(),
-                            ServerMessage.LEADERBOARD_UPDATE + "|" + room.getRoomId() + "|" + opponent + "|" + rank);
+                            ServerMessage.LEADERBOARD_UPDATE + "|" + room.getRoomId() + "|" + winner + "|" + rank);
                 }
 
-                // 게임 종료 메시지 전송 (몰수승/패 처리)
                 server.broadcastToRoom(room.getRoomId(),
-                        String.format(ServerMessage.GAME_OVER + "|%s|%s|%d|%d|FORFEIT",
-                                room.getRoomId(), opponent, winnerScore, loserScore));
+                        String.format(ServerMessage.GAME_OVER + "|%s|%s|%s|FORFEIT",
+                                room.getRoomId(), winner, serializeScores()));
             }
 
             logger.info("플레이어 게임 중 퇴장 (몰수패): " + leavingPlayer);
@@ -239,20 +220,18 @@ public class ServerGameController {
             String winner = gameState.getWinner();
             if (winner != null) {
                 int winnerScore = gameState.getPlayerScore(winner);
-                int loserScore = gameState.getOpponentScore(winner);
 
-                // 리더보드 등록 시도
                 if (leaderboardManager.addEntry(winner, winnerScore,
                         gameState.getGameMode(), gameState.getDifficulty())) {
                     int rank = leaderboardManager.getUserRank(winner,
                             gameState.getGameMode(), gameState.getDifficulty());
                     server.broadcastToRoom(room.getRoomId(),
-                            ServerMessage.LEADERBOARD_UPDATE + room.getRoomId() + "|" + winner + "|" + rank);
+                            ServerMessage.LEADERBOARD_UPDATE + "|" + room.getRoomId() + "|" + winner + "|" + rank);
                 }
 
                 server.broadcastToRoom(room.getRoomId(),
-                        String.format(ServerMessage.GAME_OVER + "|%s|%s|%d|%d",
-                                room.getRoomId(), winner, winnerScore, loserScore));
+                        String.format(ServerMessage.GAME_OVER + "|%s|%s|%s|NORMAL",
+                                room.getRoomId(), winner, serializeScores()));
             }
 
             stopGame();
@@ -263,6 +242,11 @@ public class ServerGameController {
     }
 
     public void stopGame() {
+        if (stopped) {
+            return;
+        }
+
+        stopped = true;
         try {
             if (spawnTask != null) {
                 spawnTask.cancel(false);
@@ -272,11 +256,50 @@ public class ServerGameController {
             }
             scheduler.shutdown();
             gameState.end();
+            server.resetRoomAfterGame(room.getRoomId());
 
             logger.info("게임 중지됨: " + room.getRoomId());
         } catch (Exception e) {
             logger.severe("게임 중지 중 오류: " + e.getMessage());
         }
+    }
+
+    private void broadcastPHUpdates() {
+        for (String playerName : room.getPlayers()) {
+            server.broadcastToRoom(room.getRoomId(),
+                    String.format(ServerMessage.PH_UPDATE + "|%s|%s|%.2f",
+                            room.getRoomId(), playerName, gameState.getPlayerPH(playerName)));
+        }
+    }
+
+    private String determineWinnerExcluding(String excludedPlayer) {
+        String winner = null;
+        int bestScore = Integer.MIN_VALUE;
+
+        for (Map.Entry<String, Integer> entry : gameState.getScores().entrySet()) {
+            if (entry.getKey().equals(excludedPlayer)) {
+                continue;
+            }
+            if (entry.getValue() > bestScore) {
+                winner = entry.getKey();
+                bestScore = entry.getValue();
+            }
+        }
+
+        return winner;
+    }
+
+    private String serializeScores() {
+        StringBuilder builder = new StringBuilder();
+        for (String playerName : room.getPlayers()) {
+            if (builder.length() > 0) {
+                builder.append(";");
+            }
+            builder.append(playerName)
+                    .append(":")
+                    .append(gameState.getPlayerScore(playerName));
+        }
+        return builder.toString();
     }
 
     private long calculateWordSpawnInterval(DifficultyLevel diff) {

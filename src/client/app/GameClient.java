@@ -15,6 +15,7 @@ import game.model.GameRoom;
 
 import java.io.*;
 import java.net.Socket;
+import java.nio.charset.StandardCharsets;
 import java.util.concurrent.*;
 import java.util.logging.Logger;
 
@@ -60,8 +61,8 @@ public class GameClient implements AutoCloseable {
 
         try {
             socket = new Socket(host, port);
-            reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-            writer = new PrintWriter(new OutputStreamWriter(socket.getOutputStream()), true);
+            reader = new BufferedReader(new InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8));
+            writer = new PrintWriter(new OutputStreamWriter(socket.getOutputStream(), StandardCharsets.UTF_8), true);
 
             isRunning = true;
             sendMessage(ClientCommand.LOGIN + "|" + username);
@@ -109,7 +110,7 @@ public class GameClient implements AutoCloseable {
     }
 
     public void sendPlayerListRequest(String roomId) {
-        sendMessage(ClientCommand.ROOM_LIST + "|" + roomId);
+        sendMessage(ClientCommand.PLAYER_LIST + "|" + roomId);
     }
 
     /**
@@ -156,11 +157,6 @@ public class GameClient implements AutoCloseable {
 
         sendMessage(ClientCommand.LEAVE_ROOM + "|" + roomId);
         currentRoom = null;
-
-        if (eventListener != null) {
-            eventListener.onGameEvent(ClientEvent.ROOM_CLOSED, roomId, "방이 닫혔습니다.");
-            sendMessage(ClientCommand.ROOM_LIST);
-        }
     }
 
     /**
@@ -178,6 +174,10 @@ public class GameClient implements AutoCloseable {
      */
     public void sendGameStartRequest(String roomId) {
         sendMessage(ClientCommand.START_GAME + "|" + roomId);
+    }
+
+    public void sendUpdateSettingsRequest(String roomId, String settingType, String value) {
+        sendMessage(ClientCommand.UPDATE_SETTINGS + "|" + roomId + "|" + settingType + "|" + value);
     }
 
     // In-Game 관련 메서드

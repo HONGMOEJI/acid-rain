@@ -90,7 +90,7 @@ public class GameServer {
         GameRoom room = rooms.get(roomId);
         if (room != null) {
             String playerList = String.join(";", room.getPlayers());
-            broadcastToRoom(roomId,  ServerMessage.PLAYER_UPDATE + "|" + roomId + "|" +
+            requester.sendMessage(ServerMessage.PLAYER_LIST_RESPONSE + "|" + roomId + "|" +
                     room.getCurrentPlayers() + "|" + playerList);
             logger.info("플레이어 목록 전송: " + roomId + " - " + playerList);
         }
@@ -108,7 +108,9 @@ public class GameServer {
         DifficultyLevel difficulty = DifficultyLevel.fromDisplayName(roomInfo[4]);
         int maxPlayers = Integer.parseInt(roomInfo[5]);
 
-        if (roomName.isEmpty() || maxPlayers < 2 || maxPlayers > 4) {
+        if (roomName.isEmpty() || maxPlayers < 2 || maxPlayers > 4 ||
+                GameRoom.containsReservedDelimiter(roomName) ||
+                GameRoom.containsReservedDelimiter(password)) {
             creator.sendMessage(ServerMessage.CREATE_ROOM_RESPONSE + "|false|잘못된 설정값입니다.");
             return;
         }
@@ -179,6 +181,11 @@ public class GameServer {
 
         if (room == null || players == null) {
             return;
+        }
+
+        ServerGameController controller = controllers.get(roomId);
+        if (room.isInGame() && controller != null && room.hasPlayer(client.getUsername())) {
+            controller.handlePlayerLeaveGame(client);
         }
 
         boolean isHost = client.getUsername().equals(room.getHostName());
@@ -264,13 +271,8 @@ public class GameServer {
             ServerGameController controller = new ServerGameController(this, room);
             controllers.put(roomId, controller);
 
-            // 게임 시작 알림
-            broadcastToRoom(roomId, String.format("GAME_CONFIG|%s|%s|%s",
-                    room.getGameMode().name(),
-                    room.getDifficulty().name(),
-                    String.join(";", room.getPlayers())
-            ));
-            broadcastToRoom(roomId, ServerMessage.GAME_START);
+            broadcastToRoom(roomId, ServerMessage.GAME_START + "|" + roomId + "|" +
+                    String.join(";", room.getPlayers()));
 
             controller.startGame();
             broadcastRoomList();
@@ -424,14 +426,28 @@ public class GameServer {
     }
 
     private String formatRoomInfo(GameRoom room) {
-        return String.format("%s,%s,%d,%d,%s,%s,%s",
+        return String.format("%s,%s,%d,%d,%s,%s,%s,%s",
                 room.getRoomId(),
                 room.getRoomName(),
                 room.getCurrentPlayers(),
                 room.getMaxPlayers(),
                 room.getGameMode().getDisplayName(),
                 room.getDifficulty().getDisplayName(),
-                room.getHostName());
+                room.getHostName(),
+                room.isPasswordRequired());
+    }
+
+    public synchronized void resetRoomAfterGame(String roomId) {
+        GameRoom room = rooms.get(roomId);
+        if (room == null) {
+            controllers.remove(roomId);
+            return;
+        }
+
+        room.setGameStarted(false);
+        room.setInGame(false);
+        controllers.remove(roomId);
+        broadcastRoomList();
     }
 
     public void shutdown() {

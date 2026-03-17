@@ -49,9 +49,8 @@ public class CreateRoomDialog extends BaseDialog {
         roomNameField = createTextField();
         mainPanel.add(roomNameField, gbc);
 
-        // 비밀번호 필드는 현재 사용하지 않음
-//        gbc.gridx = 0; gbc.gridy = 1;
-//        addLabel("비밀번호:", gbc);
+        gbc.gridx = 0; gbc.gridy = 1;
+        addLabel("비밀번호:", gbc);
 
         gbc.gridx = 1;
         passwordField = createPasswordField();
@@ -163,6 +162,17 @@ public class CreateRoomDialog extends BaseDialog {
         if (roomName.length() < 2 || roomName.length() > 20) {
             showError("방 제목은 2-20자 사이여야 합니다.");
             roomNameField.requestFocus();
+            return false;
+        }
+        if (GameRoom.containsReservedDelimiter(roomName)) {
+            showError("방 제목에는 | , ; : 문자를 사용할 수 없습니다.");
+            roomNameField.requestFocus();
+            return false;
+        }
+        String password = new String(passwordField.getPassword());
+        if (GameRoom.containsReservedDelimiter(password)) {
+            showError("비밀번호에는 | , ; : 문자를 사용할 수 없습니다.");
+            passwordField.requestFocus();
             return false;
         }
         return true;

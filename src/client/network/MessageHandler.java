@@ -28,7 +28,7 @@ public class MessageHandler {
     public void handleMessage(String message) {
         try {
             logger.info("수신된 메시지: " + message);
-            String[] parts = message.split("\\|");
+            String[] parts = message.split("\\|", -1);
             String messageType = parts[0];
 
             switch (messageType) {
@@ -50,7 +50,7 @@ public class MessageHandler {
                 // 게임 상태 메시지
                 case ServerMessage.PLAYER_UPDATE -> handlePlayerUpdate(parts);
                 case ServerMessage.SETTINGS_UPDATE -> handleSettingsUpdate(parts);
-                case ServerMessage.GAME_START -> handleGameStart();
+                case ServerMessage.GAME_START -> handleGameStart(parts);
 
                 // 게임 플레이 메시지
                 case ServerMessage.WORD_SPAWNED -> handleWordSpawned(parts);
@@ -94,7 +94,7 @@ public class MessageHandler {
             String[] roomInfos = Arrays.copyOfRange(parts, 1, parts.length);
             gameClient.handleEvent(ClientEvent.ROOM_LIST_UPDATED, (Object[]) roomInfos);
         } else {
-            gameClient.handleEvent(ClientEvent.ROOM_LIST_UPDATED, new String[0]);
+            gameClient.handleEvent(ClientEvent.ROOM_LIST_UPDATED, (Object) new String[0]);
         }
     }
 
@@ -173,8 +173,14 @@ public class MessageHandler {
     }
 
     // 게임 시작 처리
-    private void handleGameStart() {
-        gameClient.handleEvent(ClientEvent.GAME_STARTED);
+    private void handleGameStart(String[] parts) {
+        if (parts.length >= 3) {
+            String roomId = parts[1];
+            String[] players = parts[2].isEmpty() ? new String[0] : parts[2].split(";");
+            gameClient.handleEvent(ClientEvent.GAME_STARTED, roomId, players);
+        } else {
+            gameClient.handleEvent(ClientEvent.GAME_STARTED);
+        }
     }
 
     // 단어 생성
@@ -257,17 +263,11 @@ public class MessageHandler {
     // pH == 0 -> 게임 오버가 되도록 처리 / 상대 플레이어가 나갔을 경우 몰수 패배 처리
     private void handleGameOver(String[] parts) {
         if (parts.length >= 5) {
-            String roomId = parts[1];
             String winnerName = parts[2];
-            try {
-                int myScore = Integer.parseInt(parts[3]);
-                int opponentScore = Integer.parseInt(parts[4]);
-                boolean isForfeit = parts.length >= 6 && "FORFEIT".equals(parts[5]);
-
-                gameClient.handleEvent(ClientEvent.GAME_OVER, winnerName, myScore, opponentScore, isForfeit);
-            } catch (NumberFormatException e) {
-                logger.severe("점수 파싱 오류: " + Arrays.toString(parts));
-            }
+            String scoreSummary = parts[3];
+            String reason = parts[4];
+            boolean isForfeit = "FORFEIT".equals(reason);
+            gameClient.handleEvent(ClientEvent.GAME_OVER, winnerName, scoreSummary, isForfeit);
         }
     }
 
@@ -284,8 +284,8 @@ public class MessageHandler {
         } else {
             String type = parts.length >= 2 ? parts[1] : "UNKNOWN";
             switch (type) {
-                case "TOP" -> gameClient.handleEvent(ClientEvent.TOP_SCORES, new String[0]);
-                case "USER" -> gameClient.handleEvent(ClientEvent.USER_RECORDS, new String[0]);
+                case "TOP" -> gameClient.handleEvent(ClientEvent.TOP_SCORES);
+                case "USER" -> gameClient.handleEvent(ClientEvent.USER_RECORDS);
                 default -> logger.warning("알 수 없는 리더보드 타입: " + type);
             }
         }
@@ -315,7 +315,7 @@ public class MessageHandler {
     private void handleChat(String[] parts) {
         if (parts.length >= 3) {
             String username = parts[1];
-            String chatMsg = parts[2];
+            String chatMsg = String.join("|", Arrays.copyOfRange(parts, 2, parts.length));
             gameClient.handleEvent(ClientEvent.CHAT_RECEIVED, username, chatMsg);
         }
     }
@@ -349,7 +349,7 @@ public class MessageHandler {
 
     private void handleError(String[] parts) {
         if (parts.length >= 2) {
-            String errorMessage = parts[1];
+            String errorMessage = String.join("|", Arrays.copyOfRange(parts, 1, parts.length));
             gameClient.handleEvent(ClientEvent.ERROR_OCCURRED, errorMessage);
         }
     }

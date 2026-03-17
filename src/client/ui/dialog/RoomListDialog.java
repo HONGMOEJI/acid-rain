@@ -241,8 +241,16 @@ public class RoomListDialog extends BaseDialog implements GameEventListener {
                     JOptionPane.WARNING_MESSAGE);
             return;
         }
-        // 접속처리, 비밀번호에 대한 처리도 염두에 두었으나, 비밀번호 기능이 딱히 필요할 것 같지는 않아서 패스워드는 항상 null인 것으로 간주
-        client.sendJoinRoomRequest(selectedRoom.getRoomId(), null);
+
+        String password = null;
+        if (selectedRoom.isPasswordRequired()) {
+            password = showPasswordInputDialog(selectedRoom);
+            if (password == null) {
+                return;
+            }
+        }
+
+        client.sendJoinRoomRequest(selectedRoom.getRoomId(), password);
     }
 
     // 비밀번호 입력 다이얼로그를 표시하고 입력된 비밀번호를 반환
