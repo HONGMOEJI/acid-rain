@@ -13,14 +13,12 @@ START_GAME|roomId
 실제 구현:
 
 ```text
-GAME_CONFIG|MODE|DIFFICULTY|playerA;playerB
-GAME_START
+GAME_START|roomId|playerA;playerB;playerC
 ```
 
 주의:
 
-- `GAME_CONFIG`는 상수 정의와 클라이언트 핸들러가 없다.
-- 사실상 현재 클라이언트는 `GAME_START`만 보고 게임 화면으로 전환한다.
+- 현재 브랜치에서는 `GAME_CONFIG`를 제거하고 `GAME_START`에 참가자 목록을 포함한다.
 
 ## 2. 단어 생성
 
@@ -52,7 +50,6 @@ GAME_ACTION|roomId|WORD_INPUT|typedWord
 ```text
 WORD_MATCHED|roomId|word|playerName|newScore
 PH_UPDATE|roomId|playerName|newPH
-PH_UPDATE|roomId|opponentName|newPH
 ```
 
 특수 효과 발생 시:
@@ -96,7 +93,7 @@ LEAVE_ROOM|roomId
 ### 서버 -> 클라이언트
 
 ```text
-GAME_OVER|roomId|winner|winnerScore|loserScore|FORFEIT
+GAME_OVER|roomId|winner|playerA:120;playerB:90;playerC:70|FORFEIT
 ```
 
 ## 6. 일반 게임 종료
@@ -104,7 +101,7 @@ GAME_OVER|roomId|winner|winnerScore|loserScore|FORFEIT
 ### 서버 -> 클라이언트
 
 ```text
-GAME_OVER|roomId|winner|winnerScore|loserScore
+GAME_OVER|roomId|winner|playerA:120;playerB:90;playerC:70|NORMAL
 ```
 
 리더보드 등록 성공 시 의도된 메시지:
@@ -113,7 +110,7 @@ GAME_OVER|roomId|winner|winnerScore|loserScore
 LEADERBOARD_UPDATE|roomId|winner|rank
 ```
 
-하지만 실제 코드에는 문자열 조립 버그가 있다.
+현재 브랜치에서는 리더보드 문자열 조립 버그도 함께 수정됐다.
 
 ## 7. 현재 게임 프로토콜의 구조적 문제
 

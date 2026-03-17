@@ -33,7 +33,7 @@ ROOM_LIST_RESPONSE|R1,RoomA,1,2,Java,Easy,hostUser|R2,RoomB,2,2,C,Hard,otherUser
 `roomInfo` 필드 형식:
 
 ```text
-roomId,roomName,currentPlayers,maxPlayers,gameMode,difficulty,hostName
+roomId,roomName,currentPlayers,maxPlayers,gameMode,difficulty,hostName,passwordRequired
 ```
 
 ## 3. 방 생성
@@ -98,30 +98,30 @@ PLAYER_LIST|roomId
 
 ### 서버 -> 클라이언트
 
-실제 구현은 아래 메시지를 사용한다.
+현재 브랜치 기준 응답은 아래처럼 분리된다.
 
 ```text
+PLAYER_LIST_RESPONSE|roomId|playerCount|playerA;playerB
 PLAYER_UPDATE|roomId|playerCount|playerA;playerB
 ```
 
 주의:
 
-- 상수로는 `PLAYER_LIST_RESPONSE`도 존재하지만 실제 서버는 `PLAYER_UPDATE`를 보낸다.
-- 즉, 현재 명세와 구현이 어긋나 있다.
+- `PLAYER_LIST_RESPONSE`는 요청 응답에 사용된다.
+- `PLAYER_UPDATE`는 방 내부 상태 브로드캐스트에 사용된다.
 
 ## 6. 방 설정 변경
 
 ### 클라이언트 -> 서버
 
 ```text
-SETTINGS_UPDATED|roomId|MODE|Java
-SETTINGS_UPDATED|roomId|DIFFICULTY|Easy
+UPDATE_SETTINGS|roomId|MODE|Java
+UPDATE_SETTINGS|roomId|DIFFICULTY|Easy
 ```
 
 주의:
 
-- 클라이언트는 `ServerMessage.SETTINGS_UPDATE` 상수를 이용해 요청을 보내지만 값은 `SETTINGS_UPDATED`다.
-- 의미상 `요청`인데 이름은 `서버 메시지` 쪽 상수를 재사용하고 있다.
+- 현재 브랜치에서는 요청과 응답 타입을 분리해 `UPDATE_SETTINGS`를 요청 커맨드로 사용한다.
 
 ### 서버 -> 클라이언트
 
@@ -145,7 +145,8 @@ CHAT|username|message
 
 주의:
 
-- 메시지에 `|`가 들어가면 파싱이 깨진다.
+- 현재 구현은 채팅 본문에서 `|`를 다시 합쳐 읽는다.
+- 다만 구조화 직렬화가 아니기 때문에 장기적으로는 JSON 전환이 더 안전하다.
 
 ## 8. 방 퇴장/폐쇄
 

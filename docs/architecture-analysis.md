@@ -4,6 +4,11 @@
 
 이 프로젝트는 Java Swing 기반의 타자 게임 클라이언트와 소켓 기반 멀티플레이 서버로 구성된다.
 
+참고:
+
+- 이 문서는 원본 구조 분석을 중심으로 작성됐다.
+- 현재 브랜치에서는 `다인전 점수판`, `GAME_OVER 점수 요약`, `방 종료 후 상태 복구`, `로비 프로토콜 일부`가 이미 정리된 상태다.
+
 - 서버 진입점: `src/server/ServerMain.java`
 - 서버 핵심: `src/server/GameServer.java`
 - 클라이언트 진입점: `src/client/app/ClientMain.java`
