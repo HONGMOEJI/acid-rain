@@ -29,6 +29,8 @@ public class GameServer {
     private ServerSocket serverSocket;
     private volatile boolean running;
     private final List<ClientHandler> clients = Collections.synchronizedList(new ArrayList<>());
+    private final Map<String, ClientHandler> clientsById = new ConcurrentHashMap<>();
+    private final Map<String, ClientHandler> activeUsersByName = new ConcurrentHashMap<>();
     private final Map<String, GameRoom> rooms = new ConcurrentHashMap<>();
     private final Map<String, Set<ClientHandler>> roomPlayers = new ConcurrentHashMap<>();
     private int roomIdCounter = 1;
@@ -69,6 +71,7 @@ public class GameServer {
             ClientHandler clientHandler = new ClientHandler(clientSocket, this);
             if (clientHandler.isRunning()) {
                 clients.add(clientHandler);
+                clientsById.put(clientHandler.getClientId(), clientHandler);
                 new Thread(clientHandler).start();
                 logger.info("새로운 클라이언트 연결: " + clientSocket.getInetAddress());
                 broadcastUserCount();
@@ -387,6 +390,10 @@ public class GameServer {
 
     public synchronized void removeClient(ClientHandler client) {
         clients.remove(client);
+        clientsById.remove(client.getClientId());
+        if (client.getUsername() != null) {
+            activeUsersByName.remove(client.getUsername(), client);
+        }
         String roomId = client.getCurrentRoomId();
         if (roomId != null) {
             leaveRoom(roomId, client);
@@ -422,7 +429,7 @@ public class GameServer {
     }
 
     public void broadcastUserCount() {
-        broadcast(ServerMessage.USERS + "|" + clients.size());
+        broadcast(ServerMessage.USERS + "|" + activeUsersByName.size());
     }
 
     private String formatRoomInfo(GameRoom room) {
@@ -480,5 +487,20 @@ public class GameServer {
 
     public Map<String, Set<ClientHandler>> getRoomPlayers() {
         return roomPlayers;
+    }
+
+    public synchronized boolean registerLogin(ClientHandler client, String username) {
+        ClientHandler existing = activeUsersByName.get(username);
+        if (existing != null && existing != client) {
+            return false;
+        }
+
+        if (client.getUsername() != null && !client.getUsername().equals(username)) {
+            activeUsersByName.remove(client.getUsername(), client);
+        }
+
+        client.setUsername(username);
+        activeUsersByName.put(username, client);
+        return true;
     }
 }

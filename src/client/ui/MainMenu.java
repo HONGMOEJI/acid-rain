@@ -261,12 +261,44 @@ public class MainMenu extends JPanel implements GameEventListener {
 
     @Override
     public void onGameEvent(String eventType, Object... data) {
-        if (eventType.equals(GameEvent.ClientEvent.USERS_UPDATED) && data.length > 0) {
-            int newConnectedUsers = (int) data[0];
-            SwingUtilities.invokeLater(() -> {
-                connectedUsers = newConnectedUsers;
-                connectedUsersLabel.setText("현재 접속자 수: " + connectedUsers);
+        switch (eventType) {
+            case GameEvent.ClientEvent.USERS_UPDATED -> {
+                if (data.length > 0) {
+                    int newConnectedUsers = (int) data[0];
+                    SwingUtilities.invokeLater(() -> {
+                        connectedUsers = newConnectedUsers;
+                        connectedUsersLabel.setText("현재 접속자 수: " + connectedUsers);
+                    });
+                }
+            }
+            case GameEvent.ClientEvent.ERROR_OCCURRED -> {
+                if (data.length > 0) {
+                    String message = (String) data[0];
+                    SwingUtilities.invokeLater(() -> {
+                        JOptionPane.showMessageDialog(this,
+                                message,
+                                "오류",
+                                JOptionPane.ERROR_MESSAGE);
+                        client.disconnect();
+                        Window window = SwingUtilities.getWindowAncestor(this);
+                        if (window != null) {
+                            window.dispose();
+                        }
+                    });
+                }
+            }
+            case "CONNECTION_LOST" -> SwingUtilities.invokeLater(() -> {
+                JOptionPane.showMessageDialog(this,
+                        "서버와의 연결이 종료되었습니다.",
+                        "연결 종료",
+                        JOptionPane.WARNING_MESSAGE);
+                Window window = SwingUtilities.getWindowAncestor(this);
+                if (window != null) {
+                    window.dispose();
+                }
             });
+            default -> {
+            }
         }
     }
 

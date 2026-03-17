@@ -16,6 +16,7 @@ import java.net.Socket;
 import java.net.SocketException;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
+import java.util.UUID;
 import java.util.logging.Logger;
 
 public class ClientHandler implements Runnable {
@@ -23,6 +24,7 @@ public class ClientHandler implements Runnable {
 
     private final Socket socket;
     private final GameServer server;
+    private final String clientId;
     private PrintWriter out;
     private BufferedReader in;
     private String username;
@@ -32,6 +34,7 @@ public class ClientHandler implements Runnable {
     public ClientHandler(Socket socket, GameServer server) {
         this.socket = socket;
         this.server = server;
+        this.clientId = UUID.randomUUID().toString();
         try {
             this.out = new PrintWriter(new OutputStreamWriter(socket.getOutputStream(), StandardCharsets.UTF_8), true);
             this.in = new BufferedReader(new InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8));
@@ -130,10 +133,16 @@ public class ClientHandler implements Runnable {
             String requestedUsername = parts[1].trim();
             if (requestedUsername.isEmpty() || GameRoom.containsReservedDelimiter(requestedUsername)) {
                 sendMessage(ServerMessage.ERROR + "|사용할 수 없는 닉네임입니다.");
+                running = false;
                 return;
             }
 
-            this.username = requestedUsername;
+            if (!server.registerLogin(this, requestedUsername)) {
+                sendMessage(ServerMessage.ERROR + "|이미 사용 중인 닉네임입니다.");
+                running = false;
+                return;
+            }
+
             logger.info("로그인: " + username);
             server.broadcastUserCount();
             server.broadcastRoomList();
@@ -254,6 +263,14 @@ public class ClientHandler implements Runnable {
 
     public String getUsername() {
         return username;
+    }
+
+    public void setUsername(String username) {
+        this.username = username;
+    }
+
+    public String getClientId() {
+        return clientId;
     }
 
     public String getCurrentRoomId() {
